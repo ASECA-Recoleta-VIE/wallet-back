@@ -2,7 +2,6 @@ package com.wallet.walletapi.services
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.util.*
 
 class PersonServiceTest {
 
@@ -14,7 +13,6 @@ class PersonServiceTest {
 
         assertEquals("Lautaro González", person.fullName)
         assertEquals("lauti@example.com", person.email)
-        assertNotNull(person.id)
     }
 
     @Test
@@ -24,7 +22,7 @@ class PersonServiceTest {
 
         val found = service.getPersonByEmail("juan@example.com")
 
-        assertEquals(created.id, found?.id)
+        assertEquals(created, found)
     }
 
     @Test
