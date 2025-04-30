@@ -3,7 +3,7 @@ package com.wallet.walletapi.services
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class PersonServiceTest {
+class PersonTest {
 
     @Test
     fun `should create person with name and email`() {
