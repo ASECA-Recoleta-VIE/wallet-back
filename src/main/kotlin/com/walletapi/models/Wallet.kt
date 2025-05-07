@@ -74,6 +74,42 @@ data class Wallet(
         return this.history
     }
 
+   fun transfer(to: Wallet, amount: Double): Result<Pair<Wallet, Wallet>> {
+        if (amount < 0) {
+            return Result.failure(IllegalArgumentException("Amount must be positive"))
+        }
+        if (this.balance - amount < this.overdraft) {
+            return Result.failure(IllegalArgumentException("Insufficient funds"))
+        }
+
+        val updatedSender = Wallet(
+            overdraft = this.overdraft,
+            balance = this.balance - amount,
+            history = this.history + History(
+                date = java.time.LocalDate.now(),
+                description = "Transfer to wallet with balance ${to.getBalance()}",
+                type = TransactionType.TRANSFER_OUT,
+                amount = amount,
+                balance = this.balance - amount
+            )
+        )
+
+        val updatedReceiver = Wallet(
+            overdraft = to.getOverdraft(),
+            balance = to.getBalance() + amount,
+            history = to.getHistory() + History(
+                date = java.time.LocalDate.now(),
+                description = "Transfer from wallet with balance ${this.getBalance()}",
+                type = TransactionType.TRANSFER_IN,
+                amount = amount,
+                balance = to.getBalance() + amount
+            )
+        )
+
+        return Result.success(Pair(updatedSender, updatedReceiver))
+    }
+
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
