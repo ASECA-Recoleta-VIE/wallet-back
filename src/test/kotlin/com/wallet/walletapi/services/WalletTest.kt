@@ -48,38 +48,6 @@ class WalletTest {
         val finishedWallet = wallet.withdraw(150.0)
         assert(finishedWallet.isFailure)
     }
-//  @Test
-//  fun walletTransferShouldAddMoneyToBalance() {
-//        val wallet1: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        val wallet2: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        wallet1.deposit(100.0)
-//        val finishedWallet1 = wallet1.transfer(wallet2, 50.0)
-//        assert(finishedWallet1.balance == 50.0)
-//        assert(wallet1.balance == 50.0)
-//        assert(wallet2.balance == 50.0)
-//    }
-//
-//
-//    @Test
-//    fun walletTransferShouldNotAllowOverdraft() {
-//        val wallet1: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        val wallet2: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        wallet1.deposit(100.0)
-//        val finishedWallet1 = wallet1.transfer(wallet2, 150.0)
-//        assert(finishedWallet1.balance == 100.0)
-//        assert(wallet1.balance == 100.0)
-//        assert(wallet2.balance == 0.0)
-//    }
-//
-//    @Test
-//    fun walletTransferShouldNotAllowNegativeAmount() {
-//        val wallet1: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        val wallet2: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-//        wallet1.deposit(100.0)
-//        val finishedWallet1 = wallet1.transfer(wallet2, -50.0)
-//        assert(finishedWallet1.balance == 100.0)
-//        assert(wallet1.balance == 100.0)
-//        assert(wallet2.balance == 0.0)
-//    }
+
 
 }
