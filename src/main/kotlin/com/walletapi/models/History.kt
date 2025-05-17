@@ -9,11 +9,3 @@ data class History(
     val amount: Double,
     val balance: Double,
 )
-
-
-enum class TransactionType {
-    DEPOSIT,
-    WITHDRAWAL,
-    TRANSFER_IN,
-    TRANSFER_OUT
-}
