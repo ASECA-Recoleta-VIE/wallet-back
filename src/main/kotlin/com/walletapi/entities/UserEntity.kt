@@ -17,7 +17,7 @@ class UserEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(unique = true, nullable = false)
-    var id: Long? = null
+    var id: String? = null
 
 
     fun toUser(): User {

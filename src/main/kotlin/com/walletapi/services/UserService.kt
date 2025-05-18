@@ -106,7 +106,7 @@ class UserService {
     }
 
     private fun generateJwtToken(user: UserEntity): String {
-        val secretKey = "q miras loco"
+        val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
         val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
         return Jwts.builder()
             .setSubject(user.email)
@@ -121,7 +121,7 @@ class UserService {
 
 
     fun checkPassword(email:String, password: String, hash: String): Boolean {
-        return userService.encryptPassword(password, email = email) == hash
+        return userService.verifyPassword(password, hash)
     }
 
 

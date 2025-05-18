@@ -1,6 +1,8 @@
-package com.wallet.walletapi.services
+package com.walletapi.services
 
+import com.walletapi.models.TransactionType
 import com.walletapi.models.User
+import com.walletapi.models.Wallet
 import com.walletapi.services.UserService
 import kotlin.test.Test
 import org.springframework.http.HttpStatus
@@ -9,8 +11,8 @@ class TransferTest {
 
     @Test
     fun walletTransferShouldAddMoneyToBalance() {
-        val wallet1: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
-        val wallet2: com.walletapi.models.Wallet = com.walletapi.models.Wallet()
+        val wallet1: Wallet = Wallet()
+        val wallet2: Wallet = Wallet()
         val wallet1WithMoney = wallet1.deposit(100.0, "Initial deposit").getOrThrow()
 
         // Create dummy users for the transfer
@@ -27,8 +29,8 @@ class TransferTest {
 
     @Test
     fun walletTransferShouldNotAllowOverdraft() {
-        val wallet1 = com.walletapi.models.Wallet()
-        val wallet2 = com.walletapi.models.Wallet()
+        val wallet1 = Wallet()
+        val wallet2 = Wallet()
         val wallet1WithMoney = wallet1.deposit(100.0, "Initial deposit").getOrThrow()
 
         // Create dummy users for the transfer
@@ -43,8 +45,8 @@ class TransferTest {
 
     @Test
     fun walletTransferShouldNotAllowNegativeAmount() {
-        val wallet1 = com.walletapi.models.Wallet()
-        val wallet2 = com.walletapi.models.Wallet()
+        val wallet1 = Wallet()
+        val wallet2 = Wallet()
         val wallet1WithMoney = wallet1.deposit(100.0, "Initial deposit").getOrThrow()
 
         // Create dummy users for the transfer
@@ -65,11 +67,11 @@ class TransferTest {
         val user2 = User("Pedro Perez", "pedro@gmail.com", "password")
 
         // Create and fund wallet1
-        val wallet1 = com.walletapi.models.Wallet()
+        val wallet1 = Wallet()
         val wallet1WithMoney = wallet1.deposit(100.0, "Initial deposit").getOrThrow()
 
         // Create wallet2
-        val wallet2 = com.walletapi.models.Wallet()
+        val wallet2 = Wallet()
 
         // Perform transfer
         val transferResult = wallet1WithMoney.transfer(wallet2, 50.0, user1, user2)
@@ -86,7 +88,7 @@ class TransferTest {
 
         // Verify history
         val history = updatedWallet1.getHistory().last()
-        assert(history.type == com.walletapi.models.TransactionType.TRANSFER_OUT)
+        assert(history.type == TransactionType.TRANSFER_OUT)
         assert(history.amount == 50.0)
     }
 }

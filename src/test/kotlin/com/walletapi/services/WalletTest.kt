@@ -1,4 +1,4 @@
-package com.wallet.walletapi.services
+package com.walletapi.services
 
 import com.walletapi.models.Wallet
 import kotlin.test.Test

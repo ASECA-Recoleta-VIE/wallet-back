@@ -3,7 +3,9 @@ package com.walletapi.domain_services
 import com.walletapi.models.User
 import com.walletapi.models.Wallet
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.stereotype.Service
 
+@Service
 class DomainUserService {
     private val encoder = BCryptPasswordEncoder()
 
@@ -15,12 +17,16 @@ class DomainUserService {
 
 
     fun encryptPassword(password: String, email: String): String {
-        return encoder.encode(
-            email.substring(0, 3) +
-                    password.substring(0,password.length/2) +
-                    email.substring(email.length - 3) +
-                    password.substring(password.length/2, password.length)
-        )
-    }
 
+    // Validate inputs
+    if (password.isEmpty()) {
+        throw IllegalArgumentException("Password cannot be empty")
+    }
+    
+    // No need for custom salt - BCrypt handles this internally
+    return encoder.encode(password)
+}
+    fun verifyPassword(rawPassword: String, encodedPassword: String): Boolean {
+        return encoder.matches(rawPassword, encodedPassword)
+    }
 }

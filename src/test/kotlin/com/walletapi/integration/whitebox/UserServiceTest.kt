@@ -1,8 +1,7 @@
-package com.wallet.walletapi.services
+package com.walletapi.integration.whitebox
 
 import com.walletapi.domain_services.DomainUserService
 import com.walletapi.dto.PasswordValidation
-import com.walletapi.entities.UserEntity
 import com.walletapi.models.User
 import com.walletapi.repositories.UserRepository
 import com.walletapi.services.UserService
@@ -12,9 +11,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 
-class UserTest {
+class UserServiceTest {
 
     private lateinit var userService: UserService
     private lateinit var mockDomainUserService: DomainUserService
@@ -22,19 +20,15 @@ class UserTest {
 
     @BeforeEach
     fun setup() {
-        // Create mocks
         mockDomainUserService = Mockito.mock(DomainUserService::class.java)
         mockUserRepository = Mockito.mock(UserRepository::class.java)
 
-        // Create service with mocks
         userService = UserService()
         userService.userService = mockDomainUserService
         userService.userRepository = mockUserRepository
 
-        // Setup mock behavior
         `when`(mockUserRepository.existsByEmail(Mockito.anyString())).thenReturn(false)
 
-        // Mock the DomainUserService.createUser method to return a User
         `when`(mockDomainUserService.createUser(
             Mockito.anyString(), 
             Mockito.anyString(), 
@@ -49,16 +43,11 @@ class UserTest {
     }
 
     @Test
-    fun `should create user with name and email`() {
-        // Arrange
+    fun shouldCreateUserWithNameAndEmail() {
         val fullName = "Lautaro González"
         val email = "lauti@example.com"
         val password = "Password1!"
-
-        // Act
         val response = userService.createUser(fullName, email, password)
-
-        // Assert
         assertTrue(response.statusCode == HttpStatus.CREATED)
         val user = response.body as User
         assertEquals(fullName, user.fullName)
@@ -66,30 +55,20 @@ class UserTest {
     }
 
     @Test
-    fun `should not create user with invalid password`() {
-        // Arrange
+    fun shouldNotCreateUserWithInvalidPassword() {
         val fullName = "Juan Pérez"
         val email = "juan@example.com"
-        val password = "password" // Missing uppercase, number, and special char
-
-        // Act
+        val password = "password" 
         val response = userService.createUser(fullName, email, password)
-
-        // Assert
         assertTrue(response.statusCode == HttpStatus.BAD_REQUEST)
     }
 
     @Test
-    fun `should not create user with empty fields`() {
-        // Arrange
+    fun shouldNotCreateUserWithEmptyFields() {
         val fullName = ""
         val email = "email@example.com"
         val password = "Password1!"
-
-        // Act
         val response = userService.createUser(fullName, email, password)
-
-        // Assert
         assertTrue(response.statusCode == HttpStatus.BAD_REQUEST)
     }
 }

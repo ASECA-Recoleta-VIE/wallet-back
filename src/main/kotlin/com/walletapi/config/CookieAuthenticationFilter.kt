@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec
 @Component
 class CookieAuthenticationFilter : Filter {
 
-    private val secretKey = "q miras loco" // Should be stored in a secure place, not hardcoded
+    val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
     private val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
 
     override fun doFilter(
