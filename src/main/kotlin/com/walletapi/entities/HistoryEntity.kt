@@ -32,6 +32,10 @@ class HistoryEntity(date: LocalDate?, description: String?, type: TransactionTyp
     @Column(nullable = false)
     var balance: Double? = null
 
+    @ManyToOne
+    @JoinColumn(name = "wallet_id", nullable = false)
+    var wallet: WalletEntity? = null
+
 
     fun toHistory(): History {
         return History(

@@ -1,4 +1,4 @@
-package com.wallet.walletapi
+package com.walletapi
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
