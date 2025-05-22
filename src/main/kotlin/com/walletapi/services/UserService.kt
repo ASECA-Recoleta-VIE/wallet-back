@@ -2,8 +2,11 @@ package com.walletapi.services
 
 import com.walletapi.dto.PasswordValidation
 import com.walletapi.domain_services.DomainUserService
+import com.walletapi.dto.response.UserResponse
+import com.walletapi.dto.response.WalletResponse
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.userToEntity
+import com.walletapi.factories.UserFactory
 import com.walletapi.models.Wallet
 import com.walletapi.repositories.UserRepository
 import io.jsonwebtoken.Jwts
@@ -25,7 +28,7 @@ class UserService {
     @Autowired
     lateinit var userRepository: UserRepository
     fun createUser(fullName: String, email: String, password: String): ResponseEntity<Any> {
-        if(email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
+        if (email.isBlank() || password.isBlank() || fullName.isBlank()) {
             return ResponseEntity(
                 "Email, password and full name cannot be empty",
                 HttpStatus.BAD_REQUEST
@@ -34,36 +37,35 @@ class UserService {
 
         val passwordValidation = validatePassword(password)
         if (passwordValidation != PasswordValidation.VALID) {
-            return ResponseEntity(
-                passwordValidation.name,
-                HttpStatus.BAD_REQUEST
-            )
+            return ResponseEntity(passwordValidation.name, HttpStatus.BAD_REQUEST)
         }
 
-        if(userRepository.existsByEmail(email)) {
-            throw IllegalArgumentException("User with email $email already exists")
+        if (userRepository.existsByEmail(email)) {
+            return ResponseEntity("User with email $email already exists", HttpStatus.BAD_REQUEST)
         }
-        val user = userService.createUser(
-            fullName = fullName,
-            email = email,
-            password = password,
-            wallets = listOf(Wallet(
-                name = "Main Wallet",
-                balance = 10000.0,
-            ))
-        )
-        try {
-            userRepository.save(userToEntity(user))
-        } catch (e: Exception) {
-            return ResponseEntity(
-                "Error creating user: ${e.message}",
-                HttpStatus.INTERNAL_SERVER_ERROR
+
+        return try {
+            // ✅ Usamos la fábrica de agregados
+            val userEntity = UserFactory.createWithWallet(
+                fullName = fullName,
+                email = email,
+                password = password
             )
+
+            val savedUser = userRepository.save(userEntity)
+            val response = UserResponse(
+                id = savedUser.id!!,
+                fullName = savedUser.fullName,
+                email = savedUser.email,
+                wallets = savedUser.wallets.map {
+                    WalletResponse(it.name ?: "", it.balance ?: 0.0, "USD")
+                }
+            )
+
+            return ResponseEntity(response, HttpStatus.CREATED)
+        } catch (e: Exception) {
+            ResponseEntity("Error creating user: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
         }
-        return ResponseEntity(
-            user,
-            HttpStatus.CREATED
-        )
     }
 
     fun loginUser(email: String, password: String): ResponseEntity<Any> {

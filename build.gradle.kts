@@ -1,9 +1,9 @@
 plugins {
-	kotlin("jvm") version "1.9.25"
-	kotlin("plugin.spring") version "1.9.25"
-	id("org.springframework.boot") version "3.4.4"
-	id("io.spring.dependency-management") version "1.1.7"
-	kotlin("plugin.jpa") version "1.9.25"
+	kotlin("jvm") version "1.9.22"
+	kotlin("plugin.spring") version "1.9.22"
+	id("org.springframework.boot") version "3.2.3"
+	id("io.spring.dependency-management") version "1.1.4"
+	kotlin("plugin.jpa") version "1.9.22"
 }
 
 group = "com.walletapi"
@@ -24,23 +24,23 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
-  implementation("org.springdoc:springdoc-openapi-ui:1.6.15")
-  implementation("org.springdoc:springdoc-openapi-kotlin:1.6.15")
-  implementation("org.springdoc:springdoc-openapi-data-rest:1.6.15")
-  implementation("com.h2database:h2")
-	implementation("org.postgresql:postgresql:42.6.0")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+	implementation("com.h2database:h2")
+	implementation("org.postgresql:postgresql:42.7.2")
+	implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
 	testImplementation(kotlin("test"))
-  testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.security:spring-security-crypto")
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	implementation("io.jsonwebtoken:jjwt-impl:0.11.5")
-	implementation("io.jsonwebtoken:jjwt-jackson:0.11.5") // For JSON serialization/deserialization
+	implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
+	jvmToolchain(21)
 	compilerOptions {
 		freeCompilerArgs.addAll("-Xjsr305=strict")
 	}
