@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
     fun loggingFilterRegistration(): FilterRegistrationBean<CookieAuthenticationFilter> {
         val registrationBean = FilterRegistrationBean<CookieAuthenticationFilter>();
         registrationBean.filter = CookieAuthenticationFilter();
+        registrationBean.order = 1;
         registrationBean.addUrlPatterns("*");
         registrationBean.setName("LoggingFilter");
         return registrationBean;

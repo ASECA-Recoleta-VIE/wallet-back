@@ -33,11 +33,11 @@ class WalletEntity(
 }
 
 fun walletToEntity(wallet: Wallet, user: UserEntity): WalletEntity {
-    return WalletEntity(
+    return  WalletEntity(
         name = wallet.getName(),
         balance = wallet.getBalance(),
         overdraft = wallet.getOverdraft(),
-        history = wallet.getHistory().map { historyToEntity(it) }.toMutableList(),
+        history = mutableListOf(),
         user = user
     )
 }

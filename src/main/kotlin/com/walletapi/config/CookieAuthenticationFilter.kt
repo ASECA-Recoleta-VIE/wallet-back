@@ -53,7 +53,6 @@ class CookieAuthenticationFilter : Filter {
         }
 
         val token = tokenCookie.value
-        try {
 
 
             val claims: Claims = Jwts.parserBuilder()
@@ -63,14 +62,12 @@ class CookieAuthenticationFilter : Filter {
                 .body
 
             if (claims.expiration.before(java.util.Date())) {
-                throw Exception("Token has expired")
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Token has expired")
+                return
             }
 
             // Token is valid, continue with the request
             filterChain.doFilter(httpRequest, httpResponse)
-        } catch (e: Exception) {
-            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
-            httpResponse.writer.write("Unauthorized: ${e.message ?: "Invalid token"}")
-        }
     }
 }

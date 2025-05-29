@@ -3,8 +3,8 @@ package com.walletapi.services
 import com.walletapi.dto.request.EmailTransactionRequest
 import com.walletapi.dto.response.TransferResponse
 import com.walletapi.dto.response.WalletResponse
+import com.walletapi.entities.HistoryEntity
 import com.walletapi.entities.WalletEntity
-import com.walletapi.entities.userToEntity
 import com.walletapi.entities.walletToEntity
 import com.walletapi.models.History
 import com.walletapi.models.TransactionType
@@ -37,21 +37,35 @@ class WalletService(
             amount = depositReqInfo.amount,
             reason = depositReqInfo.description ?: "None"
         )
+        
 
         if (updatedWalletResult.isFailure) {
             throw updatedWalletResult.exceptionOrNull() ?: IllegalStateException("Unknown error during deposit")
         }
 
         val updatedWallet = updatedWalletResult.getOrNull()!!
-        
-        // Convert back to entity and save
-            ?: throw IllegalArgumentException("User not found: ${depositReqInfo.email}")
-        val updatedEntity = walletToEntity(updatedWallet, userEntity)
-        val savedEntity = walletRepository.save(updatedEntity)
+        val histories = updatedWallet.getHistory()
+        val historyEntities = ArrayList<HistoryEntity>()
+        histories.forEach { history ->
+            val entity = HistoryEntity(
+                date = history.date,
+                description = history.description,
+                type = history.type,
+                amount = history.amount,
+                balance = updatedWallet.getBalance(),
+                wallet = walletEntity
+            )
+            val historyEntity = historyRepository.save(entity)
+            historyEntities.add(historyEntity)
+        }
+        walletEntity.history = historyEntities
+        walletEntity.balance = updatedWallet.getBalance()
+        val updatedWalletEntity = walletRepository.save(walletEntity)
+
 
         return WalletResponse(
-            id = savedEntity.name!!,
-            balance = savedEntity.balance!!,
+            id = walletEntity.name!!,
+            balance = walletEntity.balance!!,
             currency = "USD"
         )
     }
