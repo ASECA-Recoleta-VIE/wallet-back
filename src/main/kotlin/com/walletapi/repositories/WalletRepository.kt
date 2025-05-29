@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface WalletRepository : JpaRepository<WalletEntity, String> {
     fun findByUser(user: UserEntity): List<WalletEntity>
+    fun getWalletEntityById(id: String): WalletEntity?
 }

@@ -6,9 +6,15 @@ import jakarta.persistence.*
 import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDate
 
-
 @Entity
-class HistoryEntity(date: LocalDate?, description: String?, type: TransactionType, amount: Double?, balance: Double?) {
+class HistoryEntity(
+    date: LocalDate?,
+    description: String?,
+    type: TransactionType,
+    amount: Double?,
+    balance: Double?,
+    wallet: WalletEntity?
+) {
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.SEQUENCE)
     @Column(unique = true, nullable = false)
@@ -16,26 +22,24 @@ class HistoryEntity(date: LocalDate?, description: String?, type: TransactionTyp
 
     @Column(nullable = false)
     @CreationTimestamp
-    var date: LocalDate ? = null
-
+    var date: LocalDate? = date
 
     @Column(nullable = false)
-    var description: String? = null
+    var description: String? = description
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
-    lateinit var type: TransactionType
+    var type: TransactionType = type
 
     @Column(nullable = false)
-    var amount: Double? = null
+    var amount: Double? = amount
 
     @Column(nullable = false)
-    var balance: Double? = null
+    var balance: Double? = balance
 
     @ManyToOne
     @JoinColumn(name = "wallet_id", nullable = false)
-    var wallet: WalletEntity? = null
-
+    var wallet: WalletEntity? = wallet
 
     fun toHistory(): History {
         return History(
@@ -43,16 +47,7 @@ class HistoryEntity(date: LocalDate?, description: String?, type: TransactionTyp
             description = this.description ?: "",
             type = this.type,
             amount = this.amount ?: 0.0,
-            balance = 0.0
+            balance = this.balance ?: 0.0
         )
     }
-}
-fun historyToEntity(history: History): HistoryEntity {
-    return HistoryEntity(
-        date = history.date,
-        description = history.description,
-        type = history.type,
-        amount = history.amount,
-        balance = history.balance
-    )
 }

@@ -6,6 +6,7 @@ import com.walletapi.entities.UserEntity
 import com.walletapi.entities.userToEntity
 import com.walletapi.entities.walletToEntity
 import com.walletapi.models.Wallet
+import com.walletapi.repositories.HistoryRepository
 import com.walletapi.repositories.UserRepository
 import com.walletapi.repositories.WalletRepository
 import io.jsonwebtoken.Jwts
@@ -22,6 +23,9 @@ import javax.crypto.spec.SecretKeySpec
 
 @Service
 class UserService {
+    @Autowired
+    private lateinit var historyRepository: HistoryRepository
+
     @Autowired
     private lateinit var walletRepository: WalletRepository
 
@@ -61,6 +65,7 @@ class UserService {
             userRepository.save(userToEntity(user))
             val userEntity = userRepository.findByEmail(email)!!
             walletRepository.save(walletToEntity(user.wallets[0],userEntity))
+            val walletEntity = walletRepository.findByUser(userEntity).first()
         } catch (e: Exception) {
             return ResponseEntity(
                 "Error creating user: ${e.message}",
