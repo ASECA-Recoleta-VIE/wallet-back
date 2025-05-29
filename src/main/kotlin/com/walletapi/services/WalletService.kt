@@ -132,13 +132,36 @@ class WalletService(
         }
 
         val (updatedFromWallet, updatedToWallet) = transferResult.getOrNull()!!
+        val lastFromHistory = updatedFromWallet.getHistory().last()
+        val lastToHistory = updatedToWallet.getHistory().last()
         
         // Convert back to entities and save
-        val updatedFromEntity = walletToEntity(updatedFromWallet, fromUserEntity)
-        val updatedToEntity = walletToEntity(updatedToWallet, toUserEntity)
-
-        val savedFromEntity = walletRepository.save(updatedFromEntity)
-        val savedToEntity = walletRepository.save(updatedToEntity)
+        fromWalletEntity.balance = updatedFromWallet.getBalance()
+        toWalletEntity.balance = updatedToWallet.getBalance()
+        fromWalletEntity.history = fromWalletEntity.history.plus(
+            HistoryEntity(
+                date = lastFromHistory.date,
+                description = lastFromHistory.description,
+                type = lastFromHistory.type,
+                amount = lastFromHistory.amount,
+                balance = updatedFromWallet.getBalance(),
+                wallet = fromWalletEntity
+            )
+        ).toMutableList()
+        historyRepository.save(fromWalletEntity.history.last())
+        toWalletEntity.history = toWalletEntity.history.plus(
+            HistoryEntity(
+                date = lastToHistory.date,
+                description = lastToHistory.description,
+                type = lastToHistory.type,
+                amount = lastToHistory.amount,
+                balance = updatedToWallet.getBalance(),
+                wallet = toWalletEntity
+            )
+        ).toMutableList()
+        historyRepository.save(toWalletEntity.history.last())
+        val savedFromEntity = walletRepository.save(fromWalletEntity)
+        val savedToEntity = walletRepository.save(toWalletEntity)
 
         val fromWalletResponse = WalletResponse(
             id = savedFromEntity.name!!,
