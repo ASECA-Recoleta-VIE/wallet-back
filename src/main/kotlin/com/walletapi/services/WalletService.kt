@@ -4,8 +4,16 @@ import com.walletapi.dto.request.EmailTransactionRequest
 import com.walletapi.dto.response.TransferResponse
 import com.walletapi.dto.response.WalletResponse
 import com.walletapi.entities.HistoryEntity
+import com.walletapi.entities.UserEntity
 import com.walletapi.entities.WalletEntity
 import com.walletapi.entities.walletToEntity
+import com.walletapi.exceptions.InsufficientFundsException
+import com.walletapi.exceptions.InvalidAmountException
+import com.walletapi.exceptions.SelfTransferException
+import com.walletapi.exceptions.TransactionException
+import com.walletapi.exceptions.UserNotFoundException
+import com.walletapi.exceptions.WalletException
+import com.walletapi.exceptions.WalletNotFoundException
 import com.walletapi.models.History
 import com.walletapi.models.TransactionType
 import com.walletapi.models.User
@@ -21,160 +29,253 @@ import java.time.LocalDate
 class WalletService(
     private val walletRepository: WalletRepository,
     private val historyRepository: HistoryRepository,
-    private val userRepository: UserRepository // Add this if not already present
+    private val userRepository: UserRepository
 ) {
+    private val defaultCurrency: String = "USD"
+    /**
+     * Finds a user by email or throws an exception if not found
+     */
+    private fun findUserByEmail(email: String): UserEntity {
+        return userRepository.findByEmail(email)
+            ?: throw UserNotFoundException(email)
+    }
+
+    /**
+     * Finds a wallet by user or throws an exception if not found
+     */
+    private fun findWalletByUser(userEntity: UserEntity, email: String): WalletEntity {
+        return walletRepository.findByUser(userEntity).firstOrNull()
+            ?: throw WalletNotFoundException(email)
+    }
+
+    /**
+     * Handles a Result object, throwing an appropriate exception if it's a failure
+     */
+    private fun <T> handleResult(result: Result<T>, errorMessage: String): T {
+        if (result.isFailure) {
+            val exception = result.exceptionOrNull()
+            when (exception) {
+                is IllegalArgumentException -> {
+                    if (exception.message?.contains("Amount must be positive") == true) {
+                        throw InvalidAmountException(exception.message ?: "Amount must be positive", exception)
+                    } else if (exception.message?.contains("Insufficient funds") == true) {
+                        throw InsufficientFundsException(exception.message ?: "Insufficient funds", exception)
+                    } else {
+                        throw TransactionException(exception.message ?: errorMessage, exception)
+                    }
+                }
+                else -> throw TransactionException(errorMessage, exception)
+            }
+        }
+        return result.getOrNull()!!
+    }
+
+    /**
+     * Creates a HistoryEntity from a History model and saves it
+     */
+    private fun createAndSaveHistoryEntity(
+        history: History,
+        walletEntity: WalletEntity,
+        balance: Double
+    ): HistoryEntity {
+        val entity = HistoryEntity(
+            date = history.date,
+            description = history.description,
+            type = history.type,
+            amount = history.amount,
+            balance = balance,
+            wallet = walletEntity
+        )
+        return historyRepository.save(entity)
+    }
+
+    /**
+     * Updates a wallet entity with new balance and history
+     */
+    private fun updateWalletEntity(
+        walletEntity: WalletEntity,
+        wallet: Wallet
+    ): WalletEntity {
+        // Update balance
+        walletEntity.balance = wallet.getBalance()
+
+        // Get the latest history record
+        val latestHistory = wallet.getHistory().lastOrNull()
+
+        // If there's a new history record, add it to the entity
+        if (latestHistory != null) {
+            val historyEntity = createAndSaveHistoryEntity(
+                latestHistory,
+                walletEntity,
+                wallet.getBalance()
+            )
+            walletEntity.history = walletEntity.history.plus(historyEntity).toMutableList()
+        }
+
+        return walletRepository.save(walletEntity)
+    }
+
+    /**
+     * Creates a WalletResponse from a WalletEntity
+     */
+    private fun createWalletResponse(walletEntity: WalletEntity, currency: String = defaultCurrency): WalletResponse {
+        return WalletResponse(
+            id = walletEntity.name ?: "",
+            balance = walletEntity.balance ?: 0.0,
+            currency = currency
+        )
+    }
 
     @Transactional
     fun deposit(depositReqInfo: EmailTransactionRequest): WalletResponse {
-        val userEntity = userRepository.findByEmail(depositReqInfo.email) ?:
-        throw IllegalArgumentException("User not found: ${depositReqInfo.email}")
-        val walletEntity = walletRepository.findByUser(userEntity).firstOrNull()
-            ?: throw IllegalArgumentException("No wallet found for user with email: ${depositReqInfo.email}")
-        
-        val wallet = walletEntity.toWallet()
-        
-        val updatedWalletResult = wallet.deposit(
-            amount = depositReqInfo.amount,
-            reason = depositReqInfo.description ?: "None"
-        )
-        
+        try {
+            // Find user and wallet
+            val userEntity = findUserByEmail(depositReqInfo.email)
+            val walletEntity = findWalletByUser(userEntity, depositReqInfo.email)
 
-        if (updatedWalletResult.isFailure) {
-            throw updatedWalletResult.exceptionOrNull() ?: IllegalStateException("Unknown error during deposit")
-        }
+            // Convert entity to domain model
+            val wallet = walletEntity.toWallet()
 
-        val updatedWallet = updatedWalletResult.getOrNull()!!
-        val histories = updatedWallet.getHistory()
-        val historyEntities = ArrayList<HistoryEntity>()
-        histories.forEach { history ->
-            val entity = HistoryEntity(
-                date = history.date,
-                description = history.description,
-                type = history.type,
-                amount = history.amount,
-                balance = updatedWallet.getBalance(),
-                wallet = walletEntity
+            // Perform deposit operation
+            val updatedWalletResult = wallet.deposit(
+                amount = depositReqInfo.amount,
+                reason = depositReqInfo.description ?: "None"
             )
-            val historyEntity = historyRepository.save(entity)
-            historyEntities.add(historyEntity)
+
+            // Handle result and get updated wallet
+            val updatedWallet = handleResult(
+                updatedWalletResult, 
+                "Unknown error during deposit"
+            )
+
+            // Update wallet entity with new balance and history
+            val updatedWalletEntity = updateWalletEntity(walletEntity, updatedWallet)
+
+            // Create and return response
+            return createWalletResponse(updatedWalletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error processing deposit: ${e.message}", e)
         }
-        walletEntity.history = historyEntities
-        walletEntity.balance = updatedWallet.getBalance()
-        val updatedWalletEntity = walletRepository.save(walletEntity)
-
-
-        return WalletResponse(
-            id = walletEntity.name!!,
-            balance = walletEntity.balance!!,
-            currency = "USD"
-        )
     }
 
     @Transactional
     fun withdraw(userEmail: String, amount: Double, description: String? = null): WalletResponse {
-        val userEntity = userRepository.findByEmail(userEmail) ?: throw IllegalArgumentException("User not found: $userEmail")
-        // Find wallet entity by user email
-        val walletEntity = walletRepository.findByUser(userEntity).firstOrNull()
-            ?: throw IllegalArgumentException("No wallet found for user with email: $userEmail")
-        
-        // Convert entity to domain model
-        val wallet = walletEntity.toWallet()
-        
-        // Use wallet's own method for withdraw
-        val updatedWalletResult = wallet.withdraw(amount)
+        try {
+            // Find user and wallet
+            val userEntity = findUserByEmail(userEmail)
+            val walletEntity = findWalletByUser(userEntity, userEmail)
 
-        if (updatedWalletResult.isFailure) {
-            throw updatedWalletResult.exceptionOrNull() ?: IllegalStateException("Unknown error during withdrawal")
+            // Convert entity to domain model
+            val wallet = walletEntity.toWallet()
+
+            // Perform withdraw operation
+            val updatedWalletResult = wallet.withdraw(amount, description ?: "Withdrawal")
+
+            // Handle result and get updated wallet
+            val updatedWallet = handleResult(
+                updatedWalletResult, 
+                "Unknown error during withdrawal"
+            )
+
+            // Update wallet entity with new balance and history
+            val updatedWalletEntity = updateWalletEntity(walletEntity, updatedWallet)
+
+            // Create and return response
+            return createWalletResponse(updatedWalletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error processing withdrawal: ${e.message}", e)
         }
-
-        val updatedWallet = updatedWalletResult.getOrNull()!!
-        
-        val updatedEntity = walletToEntity(updatedWallet, userEntity)
-        val savedEntity = walletRepository.save(updatedEntity)
-
-        return WalletResponse(
-            id = savedEntity.name!!,
-            balance = savedEntity.balance!!,
-            currency = "USD"
-        )
     }
 
     @Transactional
     fun transfer(fromUserEmail: String, toUserEmail: String, amount: Double, description: String? = null): TransferResponse {
-        val userFromEntity = userRepository.findByEmail(fromUserEmail) ?: throw IllegalArgumentException("User not found: $fromUserEmail")
-        val userToEntity = userRepository.findByEmail(toUserEmail) ?: throw IllegalArgumentException("User not found: $toUserEmail")
-        val fromWalletEntity = walletRepository.findByUser(userFromEntity)  .firstOrNull()
-            ?: throw IllegalArgumentException("No wallet found for user with email: $fromUserEmail")
-        
-        val toWalletEntity = walletRepository.findByUser(userToEntity) .firstOrNull()
-            ?: throw IllegalArgumentException("No wallet found for user with email: $toUserEmail")
-        
-        // Convert entities to domain models
-        val fromWallet = fromWalletEntity.toWallet()
-        val toWallet = toWalletEntity.toWallet()
-        
-        // Get user entities
-        val fromUserEntity = userRepository.findByEmail(fromUserEmail)
-            ?: throw IllegalArgumentException("User not found: $fromUserEmail")
-        
-        val toUserEntity = userRepository.findByEmail(toUserEmail)
-            ?: throw IllegalArgumentException("User not found: $toUserEmail")
-        
-        // Convert to domain users for the transfer
-        val fromUser = fromUserEntity.toUser()
-        val toUser = toUserEntity.toUser()
+        try {
+            // Find users and wallets
+            val fromUserEntity = findUserByEmail(fromUserEmail)
+            val toUserEntity = findUserByEmail(toUserEmail)
+            // Check if users are the same
+            if (fromUserEmail == toUserEmail) {
+                throw SelfTransferException(fromUserEmail)
+            }
+            val fromWalletEntity = findWalletByUser(fromUserEntity, fromUserEmail)
+            val toWalletEntity = findWalletByUser(toUserEntity, toUserEmail)
 
-        // Use wallet's own method for transfer
-        val transferResult = fromWallet.transfer(toWallet, amount, fromUser, toUser)
+            // Convert entities to domain models
+            val fromWallet = fromWalletEntity.toWallet()
+            val toWallet = toWalletEntity.toWallet()
 
-        if (transferResult.isFailure) {
-            throw transferResult.exceptionOrNull() ?: IllegalStateException("Unknown error during transfer")
+            // Convert to domain users for the transfer
+            val fromUser = fromUserEntity.toUser()
+            val toUser = toUserEntity.toUser()
+
+            // Perform transfer operation
+            val transferResult = fromWallet.transfer(toWallet, amount, fromUser, toUser)
+
+            // Handle result and get updated wallets
+            val (updatedFromWallet, updatedToWallet) = handleResult(
+                transferResult,
+                "Unknown error during transfer"
+            )
+
+            // Update wallet entities with new balances and histories
+            val savedFromEntity = updateWalletEntity(fromWalletEntity, updatedFromWallet)
+            val savedToEntity = updateWalletEntity(toWalletEntity, updatedToWallet)
+
+            // Create and return response
+            return TransferResponse(
+                fromWallet = createWalletResponse(savedFromEntity),
+                toWallet = createWalletResponse(savedToEntity)
+            )
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error processing transfer: ${e.message}", e)
         }
-
-        val (updatedFromWallet, updatedToWallet) = transferResult.getOrNull()!!
-        
-        // Convert back to entities and save
-        val updatedFromEntity = walletToEntity(updatedFromWallet, fromUserEntity)
-        val updatedToEntity = walletToEntity(updatedToWallet, toUserEntity)
-
-        val savedFromEntity = walletRepository.save(updatedFromEntity)
-        val savedToEntity = walletRepository.save(updatedToEntity)
-
-        val fromWalletResponse = WalletResponse(
-            id = savedFromEntity.name!!,
-            balance = savedFromEntity.balance!!,
-            currency = "ARS"
-        )
-
-        val toWalletResponse = WalletResponse(
-            id = savedToEntity.name!!,
-            balance = savedToEntity.balance!!,
-            currency = "ARS"
-        )
-
-        return TransferResponse(
-            fromWallet = fromWalletResponse,
-            toWallet = toWalletResponse
-        )
     }
 
-    fun getHistory(userEmail: String): List<History> {
-        val userEntity = userRepository.findByEmail(userEmail) ?: throw IllegalArgumentException("User not found: $userEmail")
-        val walletEntity = walletRepository.findByUser(userEntity).firstOrNull()
-            ?: throw IllegalArgumentException("No wallet found for user with email: $userEmail")
-        
-        val wallet = walletEntity.toWallet()
-        return wallet.getHistory()
-    }
+    fun getHistory(userEmail: String): List<HistoryEntity> {
+        try {
+            // Find user and wallet
+            val userEntity = findUserByEmail(userEmail)
+            val walletEntity = findWalletByUser(userEntity, userEmail)
 
-    // This helper method should be removed or properly implemented
-    private fun findWalletByUserEmail(email: String): Wallet? {
-        // This method is incorrect - it needs to convert entities to domain objects
-        val userEntity = userRepository.findByEmail(email)
-        if (userEntity == null) {
-            return null
+            // Convert entity to domain model and return history
+            val wallet = walletEntity.toWallet()
+            return historyRepository.findByWallet(walletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error retrieving transaction history: ${e.message}", e)
         }
-        val walletEntity = walletRepository.findByUser(userEntity).firstOrNull()
-        return walletEntity!!.toWallet()
     }
+
+    fun getWallet(userEmail: String): WalletResponse {
+        try {
+            // Find user and wallet
+            val userEntity = findUserByEmail(userEmail)
+            val walletEntity = findWalletByUser(userEntity, userEmail)
+
+            // Create and return response
+            return createWalletResponse(walletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error retrieving wallet info: ${e.message}", e)
+        }
+    }
+
 }

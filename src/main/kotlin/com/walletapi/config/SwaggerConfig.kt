@@ -12,7 +12,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc
 @Configuration
 @EnableWebMvc
 class SwaggerConfig {
-
     @Bean
     fun openAPI(): OpenAPI {
         return OpenAPI()
@@ -33,5 +32,6 @@ class SwaggerConfig {
                     .description("API for wallet management")
                     .version("1.0.0")
             )
+
     }
 }
