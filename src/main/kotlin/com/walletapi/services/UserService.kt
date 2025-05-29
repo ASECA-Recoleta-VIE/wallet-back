@@ -4,8 +4,11 @@ import com.walletapi.dto.PasswordValidation
 import com.walletapi.domain_services.DomainUserService
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.userToEntity
+import com.walletapi.entities.walletToEntity
 import com.walletapi.models.Wallet
+import com.walletapi.repositories.HistoryRepository
 import com.walletapi.repositories.UserRepository
+import com.walletapi.repositories.WalletRepository
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,6 +23,12 @@ import javax.crypto.spec.SecretKeySpec
 
 @Service
 class UserService {
+    @Autowired
+    private lateinit var historyRepository: HistoryRepository
+
+    @Autowired
+    private lateinit var walletRepository: WalletRepository
+
     @Autowired
     lateinit var userService: DomainUserService
     @Autowired
@@ -54,6 +63,9 @@ class UserService {
         )
         try {
             userRepository.save(userToEntity(user))
+            val userEntity = userRepository.findByEmail(email)!!
+            walletRepository.save(walletToEntity(user.wallets[0],userEntity))
+            val walletEntity = walletRepository.findByUser(userEntity).first()
         } catch (e: Exception) {
             return ResponseEntity(
                 "Error creating user: ${e.message}",
