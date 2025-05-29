@@ -30,7 +30,7 @@ data class Wallet(
         ))
     }
 
-    fun withdraw(amount: Double): Result<Wallet> {
+    fun withdraw(amount: Double, reason: String = "Withdrawal"): Result<Wallet> {
         if (amount < 0) {
             return Result.failure(IllegalArgumentException("Amount must be positive"))
         }
@@ -43,7 +43,13 @@ data class Wallet(
             name = this.name,
             overdraft = this.overdraft,
             balance = this.balance - amount,
-            history = this.history
+            history = this.history + History(
+                date = LocalDate.now(),
+                description = reason,
+                type = TransactionType.WITHDRAWAL,
+                amount = amount,
+                balance = this.balance - amount
+            )
         )
         )
     }

@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "Transaction history record")
 data class HistoryResponse(
     @field:Schema(description = "Transaction ID")
-    val id: String,
+    val id: Long,
     
     @field:Schema(description = "Transaction amount", example = "100.00")
     val amount: Double,
