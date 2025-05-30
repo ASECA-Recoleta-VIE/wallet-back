@@ -61,6 +61,9 @@ class CookieAuthenticationFilter : Filter {
                 .parseClaimsJws(token)
                 .body
 
+            val userId = claims["id"] as String
+            httpRequest.setAttribute("userId", userId)
+
             if (claims.expiration.before(java.util.Date())) {
                 httpResponse.status = HttpStatus.UNAUTHORIZED.value()
                 httpResponse.writer.write("Unauthorized: Token has expired")
