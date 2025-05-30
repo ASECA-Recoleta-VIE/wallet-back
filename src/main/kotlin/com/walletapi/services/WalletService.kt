@@ -7,13 +7,12 @@ import com.walletapi.entities.HistoryEntity
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.WalletEntity
 import com.walletapi.entities.walletToEntity
-import com.walletapi.exceptions.InsufficientFundsException
-import com.walletapi.exceptions.InvalidAmountException
-import com.walletapi.exceptions.SelfTransferException
-import com.walletapi.exceptions.TransactionException
-import com.walletapi.exceptions.UserNotFoundException
 import com.walletapi.exceptions.WalletException
 import com.walletapi.exceptions.WalletNotFoundException
+import com.walletapi.exceptions.InvalidAmountException
+import com.walletapi.exceptions.InsufficientFundsException
+import com.walletapi.exceptions.SelfTransferException
+import com.walletapi.exceptions.UserNotFoundException
 import com.walletapi.models.History
 import com.walletapi.models.TransactionType
 import com.walletapi.models.User
@@ -23,6 +22,7 @@ import com.walletapi.repositories.UserRepository
 import com.walletapi.repositories.WalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.hibernate.TransactionException
 import java.time.LocalDate
 
 @Service
@@ -261,6 +261,21 @@ class WalletService(
         }
     }
 
+    fun getWalletById(walletId: String): WalletResponse {
+        try {
+            val walletEntity = walletRepository.findById(walletId)
+                .orElseThrow { WalletNotFoundException("Wallet not found with ID: $walletId") }
+            
+            return createWalletResponse(walletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error retrieving wallet info: ${e.message}", e)
+        }
+    }
+
     fun getWallet(userEmail: String): WalletResponse {
         try {
             // Find user and wallet
@@ -278,4 +293,14 @@ class WalletService(
         }
     }
 
+    // This helper method should be removed or properly implemented
+    private fun findWalletByUserEmail(email: String): Wallet? {
+        // This method is incorrect - it needs to convert entities to domain objects
+        val userEntity = userRepository.findByEmail(email)
+        if (userEntity == null) {
+            return null
+        }
+        val walletEntity = walletRepository.findByUser(userEntity).firstOrNull()
+        return walletEntity!!.toWallet()
+    }
 }

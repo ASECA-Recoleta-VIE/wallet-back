@@ -5,6 +5,8 @@ import com.walletapi.domain_services.DomainUserService
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.userToEntity
 import com.walletapi.entities.walletToEntity
+import com.walletapi.exceptions.WalletException
+import com.walletapi.exceptions.InvalidAmountException
 import com.walletapi.models.Wallet
 import com.walletapi.repositories.HistoryRepository
 import com.walletapi.repositories.UserRepository
@@ -16,6 +18,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.util.LinkedMultiValueMap
 import java.security.Key
 import java.time.LocalDateTime
 import java.util.*
@@ -34,48 +38,59 @@ class UserService {
     @Autowired
     lateinit var userRepository: UserRepository
     fun createUser(fullName: String, email: String, password: String): ResponseEntity<Any> {
-        if(email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
-            return ResponseEntity(
-                "Email, password and full name cannot be empty",
-                HttpStatus.BAD_REQUEST
-            )
-        }
-
-        val passwordValidation = validatePassword(password)
-        if (passwordValidation != PasswordValidation.VALID) {
-            return ResponseEntity(
-                passwordValidation.name,
-                HttpStatus.BAD_REQUEST
-            )
-        }
-
-        if(userRepository.existsByEmail(email)) {
-            throw IllegalArgumentException("User with email $email already exists")
-        }
-        val user = userService.createUser(
-            fullName = fullName,
-            email = email,
-            password = password,
-            wallets = listOf(Wallet(
-                name = "Main Wallet",
-                balance = 10000.0,
-            ))
-        )
         try {
-            userRepository.save(userToEntity(user))
-            val userEntity = userRepository.findByEmail(email)!!
-            walletRepository.save(walletToEntity(user.wallets[0],userEntity))
-            val walletEntity = walletRepository.findByUser(userEntity).first()
-        } catch (e: Exception) {
+            // Validate input parameters
+            if (email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
+                throw InvalidAmountException("Email, password and full name cannot be empty")
+            }
+
+            // Validate password
+            val passwordValidation = validatePassword(password)
+            if (passwordValidation != PasswordValidation.VALID) {
+                throw InvalidAmountException(passwordValidation.name)
+            }
+
+            // Check if user already exists
+            if (userRepository.existsByEmail(email)) {
+                throw InvalidAmountException("User with email $email already exists")
+            }
+
+            // Create user with initial wallet
+            val user = userService.createUser(
+                fullName = fullName,
+                email = email,
+                password = password,
+                wallets = listOf(Wallet(
+                    name = "Main Wallet",
+                    balance = 10000.0,
+                ))
+            )
+
+            // Save user and wallet
+            val userEntity = userRepository.save(userToEntity(user))
+            val walletEntity = walletRepository.save(walletToEntity(user.wallets[0], userEntity))
+
+            // Return success response
             return ResponseEntity(
+                mapOf(
+                    "userId" to userEntity.id,
+                    "fullName" to user.fullName,
+                    "email" to user.email,
+                    "walletId" to walletEntity.id
+                ),
+                HttpStatus.CREATED
+            )
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to ResponseStatusException
+            throw ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
                 "Error creating user: ${e.message}",
-                HttpStatus.INTERNAL_SERVER_ERROR
+                e
             )
         }
-        return ResponseEntity(
-            user,
-            HttpStatus.CREATED
-        )
     }
 
     fun loginUser(email: String, password: String): ResponseEntity<Any> {
@@ -91,6 +106,11 @@ class UserService {
                 "User with email $email not found",
                 HttpStatus.NOT_FOUND
             )
+
+        println("user: $user")
+        println("password: $password")
+        println("email: $email")
+        println("user.password: ${user.password}")
 
         if (!this.checkPassword(email, password, user.password)) {
             return ResponseEntity(
@@ -114,7 +134,14 @@ class UserService {
         return ResponseEntity
             .ok()
             .header("Set-Cookie", cookie.toString())
-            .body("login-success")
+            .body(
+               mapOf(
+                "userId" to user.id,
+                "fullName" to user.fullName,
+                "email" to user.email,
+                "walletId" to user.wallets[0].id,
+               )
+            )
     }
 
     private fun generateJwtToken(user: UserEntity): String {
@@ -159,5 +186,11 @@ class UserService {
             return PasswordValidation.NO_SPECIAL_CHAR
         }
         return PasswordValidation.VALID
+    }
+
+    fun getCurrentUser(userId: String): ResponseEntity<Any> {
+        val user = userRepository.findById(userId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "User not found") }
+        return ResponseEntity.ok(user)
     }
 }

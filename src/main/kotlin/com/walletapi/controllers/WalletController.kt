@@ -15,7 +15,21 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
+@RequestMapping("/api/wallets")
 class WalletController(private val walletService: WalletService) {
+
+    @Operation(summary = "Get wallet by ID")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Wallet found successfully"),
+        ApiResponse(responseCode = "404", description = "Wallet not found")
+    ])
+    @GetMapping("/{walletId}")
+    fun getWalletById(
+        @Parameter(description = "ID of the wallet to retrieve") @PathVariable walletId: String
+    ): ResponseEntity<WalletResponse> {
+        val walletResponse = walletService.getWalletById(walletId)
+        return ResponseEntity(walletResponse, HttpStatus.OK)
+    }
 
     @Operation(summary = "Deposit funds to a user's wallet")
     @ApiResponses(value = [

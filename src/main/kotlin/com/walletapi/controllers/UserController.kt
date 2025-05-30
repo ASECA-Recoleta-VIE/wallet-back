@@ -30,4 +30,9 @@ class UserController {
             password = request.password
         )
     }
+
+    @GetMapping("/me")
+    fun getCurrentUser(@RequestAttribute("userId") userId: String): ResponseEntity<Any> {
+        return userService.getCurrentUser(userId)
+    }
 }
