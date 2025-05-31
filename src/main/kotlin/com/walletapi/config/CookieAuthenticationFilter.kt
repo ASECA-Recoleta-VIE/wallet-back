@@ -13,23 +13,26 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
 import java.security.Key
 import javax.crypto.spec.SecretKeySpec
 import kotlin.jvm.optionals.getOrNull
 
 @Component
-class CookieAuthenticationFilter : Filter {
-    @Autowired lateinit var userRepository: UserRepository
+class CookieAuthenticationFilter @Autowired constructor(
+    private val userRepository: UserRepository
+) : OncePerRequestFilter() {
+
     val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
     private val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
 
-    override fun doFilter(
-        request: ServletRequest,
-        response: ServletResponse,
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val httpRequest = request as HttpServletRequest
-        val httpResponse = response as HttpServletResponse
+        val httpRequest = request
+        val httpResponse = response
         // Skip authentication for login, register, and Swagger/OpenAPI endpoints
         if (httpRequest.requestURI.contains("/api/users/login") ||
             "OPTIONS" == httpRequest.method ||
