@@ -43,9 +43,9 @@ class WalletService(
     /**
      * Finds a wallet by user or throws an exception if not found
      */
-    private fun findWalletByUser(userEntity: UserEntity, email: String): WalletEntity {
+    private fun findWalletByUser(userEntity: UserEntity, email: String?): WalletEntity {
         return walletRepository.findByUser(userEntity).firstOrNull()
-            ?: throw WalletNotFoundException(email)
+            ?: throw WalletNotFoundException(userEntity.email ?: email ?: "Unknown user")
     }
 
     /**
@@ -127,11 +127,10 @@ class WalletService(
     }
 
     @Transactional
-    fun deposit(depositReqInfo: EmailTransactionRequest): WalletResponse {
+    fun deposit(user: UserEntity, depositReqInfo: EmailTransactionRequest): WalletResponse {
         try {
             // Find user and wallet
-            val userEntity = findUserByEmail(depositReqInfo.email)
-            val walletEntity = findWalletByUser(userEntity, depositReqInfo.email)
+            val walletEntity = findWalletByUser(user, user.email)
 
             // Convert entity to domain model
             val wallet = walletEntity.toWallet()
@@ -163,11 +162,10 @@ class WalletService(
     }
 
     @Transactional
-    fun withdraw(userEmail: String, amount: Double, description: String? = null): WalletResponse {
+    fun withdraw(user: UserEntity, amount: Double, description: String? = null): WalletResponse {
         try {
             // Find user and wallet
-            val userEntity = findUserByEmail(userEmail)
-            val walletEntity = findWalletByUser(userEntity, userEmail)
+            val walletEntity = findWalletByUser(user, user.email)
 
             // Convert entity to domain model
             val wallet = walletEntity.toWallet()
@@ -196,16 +194,15 @@ class WalletService(
     }
 
     @Transactional
-    fun transfer(fromUserEmail: String, toUserEmail: String, amount: Double, description: String? = null): TransferResponse {
+    fun transfer(user: UserEntity, toUserEmail: String, amount: Double, description: String? = null): TransferResponse {
         try {
             // Find users and wallets
-            val fromUserEntity = findUserByEmail(fromUserEmail)
             val toUserEntity = findUserByEmail(toUserEmail)
             // Check if users are the same
-            if (fromUserEmail == toUserEmail) {
-                throw SelfTransferException(fromUserEmail)
+            if (user.email == toUserEmail) {
+                throw SelfTransferException(user.email)
             }
-            val fromWalletEntity = findWalletByUser(fromUserEntity, fromUserEmail)
+            val fromWalletEntity = findWalletByUser(user, user.email)
             val toWalletEntity = findWalletByUser(toUserEntity, toUserEmail)
 
             // Convert entities to domain models
@@ -213,7 +210,7 @@ class WalletService(
             val toWallet = toWalletEntity.toWallet()
 
             // Convert to domain users for the transfer
-            val fromUser = fromUserEntity.toUser()
+            val fromUser = user.toUser()
             val toUser = toUserEntity.toUser()
 
             // Perform transfer operation
@@ -243,11 +240,10 @@ class WalletService(
         }
     }
 
-    fun getHistory(userEmail: String): List<HistoryEntity> {
+    fun getHistory(user: UserEntity): List<HistoryEntity> {
         try {
             // Find user and wallet
-            val userEntity = findUserByEmail(userEmail)
-            val walletEntity = findWalletByUser(userEntity, userEmail)
+            val walletEntity = findWalletByUser(user, user.email)
 
             // Convert entity to domain model and return history
             val wallet = walletEntity.toWallet()
@@ -261,11 +257,10 @@ class WalletService(
         }
     }
 
-    fun getWallet(userEmail: String): WalletResponse {
+    fun getWallet(user: UserEntity): WalletResponse {
         try {
             // Find user and wallet
-            val userEntity = findUserByEmail(userEmail)
-            val walletEntity = findWalletByUser(userEntity, userEmail)
+            val walletEntity = findWalletByUser(user, user.email)
 
             // Create and return response
             return createWalletResponse(walletEntity)

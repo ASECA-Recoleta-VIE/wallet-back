@@ -121,8 +121,8 @@ class UserService {
         val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
         val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
         return Jwts.builder()
-            .setSubject(user.email)
-            .claim("id", user.id)
+            .setSubject(user.id)
+            .claim("email", user.email)
             .claim("fullName", user.fullName)
             .setIssuedAt(Date())
             .setExpiration( Date.from(LocalDateTime.now().plusHours(2).atZone(java.time.ZoneId.systemDefault()).toInstant()))

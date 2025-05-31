@@ -1,5 +1,6 @@
 package com.walletapi.config
 
+import com.walletapi.repositories.UserRepository
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
@@ -9,14 +10,16 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import java.security.Key
 import javax.crypto.spec.SecretKeySpec
+import kotlin.jvm.optionals.getOrNull
 
 @Component
 class CookieAuthenticationFilter : Filter {
-
+    @Autowired lateinit var userRepository: UserRepository
     val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
     private val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
 
@@ -55,19 +58,36 @@ class CookieAuthenticationFilter : Filter {
         val token = tokenCookie.value
 
 
-            val claims: Claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .body
+        val claims: Claims = Jwts.parserBuilder()
+            .setSigningKey(key)
+            .build()
+            .parseClaimsJws(token)
+            .body
 
-            if (claims.expiration.before(java.util.Date())) {
-                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
-                httpResponse.writer.write("Unauthorized: Token has expired")
-                return
-            }
+        if (claims.expiration.before(java.util.Date())) {
+            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+            httpResponse.writer.write("Unauthorized: Token has expired")
+            return
+        }
 
-            // Token is valid, continue with the request
-            filterChain.doFilter(httpRequest, httpResponse)
+        // Get user Id from claims and put it in the request attribute
+        val userId = claims.subject
+        if (userId.isNullOrEmpty()) {
+            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+            httpResponse.writer.write("Unauthorized: Invalid token")
+            return
+        }
+        // check if there is a user with this id in the database
+        val optionalUser = userRepository.getUserEntityById(userId)
+        if (optionalUser.isEmpty) {
+            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+            httpResponse.writer.write("Unauthorized: User not found")
+            return
+        }
+
+        httpRequest.setAttribute("user", optionalUser.get())
+
+        // Token is valid, continue with the request
+        filterChain.doFilter(httpRequest, httpResponse)
     }
 }
