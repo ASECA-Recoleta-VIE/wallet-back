@@ -19,6 +19,8 @@ repositories {
 	mavenCentral()
 }
 
+val  mockitoAgent = configurations.create("mockitoAgent")
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -29,6 +31,7 @@ dependencies {
 	implementation("org.postgresql:postgresql:42.6.0")
 	testImplementation(kotlin("test"))
   testImplementation("org.springframework.boot:spring-boot-starter-test")
+	mockitoAgent("org.mockito:mockito-core") { isTransitive = false }
 	implementation("org.springframework.security:spring-security-crypto")
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	implementation("io.jsonwebtoken:jjwt-impl:0.11.5")
@@ -51,4 +54,8 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+// Add JVM arguments for modern JDK compatibility and Mockito
+	jvmArgs(
+		"-javaagent:${mockitoAgent.asPath}",
+	)
 }
