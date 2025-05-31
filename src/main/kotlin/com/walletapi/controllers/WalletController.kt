@@ -125,6 +125,7 @@ class WalletController(private val walletService: WalletService) {
         }
         val wallet = walletService.getWallet(user)
 
+
         return ResponseEntity(
             WalletResponse(
                 id = wallet.id,

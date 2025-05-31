@@ -88,6 +88,5 @@ class CookieAuthenticationFilter : Filter {
 
         // Token is valid, continue with the request
         filterChain.doFilter(httpRequest, httpResponse)
-
     }
 }

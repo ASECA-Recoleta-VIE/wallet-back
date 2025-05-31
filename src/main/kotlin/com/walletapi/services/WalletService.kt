@@ -46,7 +46,6 @@ class WalletService(
     private fun findWalletByUser(userEntity: UserEntity, email: String?): WalletEntity {
         return walletRepository.findByUser(userEntity).firstOrNull()
             ?: throw WalletNotFoundException(userEntity.email ?: email ?: "Unknown user")
-
     }
 
     /**
@@ -142,11 +141,11 @@ class WalletService(
                 reason = depositReqInfo.description ?: "None"
             )
 
-
             // Handle result and get updated wallet
             val updatedWallet = handleResult(
                 updatedWalletResult, 
                 "Unknown error during deposit"
+
             )
 
             // Update wallet entity with new balance and history
@@ -160,6 +159,7 @@ class WalletService(
         } catch (e: Exception) {
             // Convert any other exceptions to TransactionException
             throw TransactionException("Error processing deposit: ${e.message}", e)
+
 
         }
     }
@@ -226,6 +226,7 @@ class WalletService(
             )
 
 
+
             // Update wallet entities with new balances and histories
             val savedFromEntity = updateWalletEntity(fromWalletEntity, updatedFromWallet)
             val savedToEntity = updateWalletEntity(toWalletEntity, updatedToWallet)
@@ -265,7 +266,6 @@ class WalletService(
         try {
             // Find user and wallet
             val walletEntity = findWalletByUser(user, user.email)
-
 
             // Create and return response
             return createWalletResponse(walletEntity)
