@@ -201,9 +201,11 @@ class WalletService(
     fun transfer(user: UserEntity, toUserEmail: String, amount: Double, description: String? = null): TransferResponse {
         try {
             // Find users and wallets
+          
             // refetch user to dont have lazy loading issues
             val user = userRepository.findByEmail(user.email)
                 ?: throw UserNotFoundException(user.email)
+
             val toUserEntity = findUserByEmail(toUserEmail)
             // Check if users are the same
             if (user.email == toUserEmail) {

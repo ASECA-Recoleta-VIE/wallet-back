@@ -22,6 +22,7 @@ import kotlin.jvm.optionals.getOrNull
 class CookieAuthenticationFilter @Autowired constructor(
     private val userRepository: UserRepository
 ) : OncePerRequestFilter() {
+
     val secretKey = "abcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()_+-=[pipe]{}|;':\",.<div>?/"
     private val key: Key = SecretKeySpec(secretKey.toByteArray(), SignatureAlgorithm.HS256.jcaName)
 
