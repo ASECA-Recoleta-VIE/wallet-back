@@ -57,7 +57,6 @@ class CookieAuthenticationFilter : Filter {
 
         val token = tokenCookie.value
 
-
         val claims: Claims = Jwts.parserBuilder()
             .setSigningKey(key)
             .build()
@@ -89,5 +88,6 @@ class CookieAuthenticationFilter : Filter {
 
         // Token is valid, continue with the request
         filterChain.doFilter(httpRequest, httpResponse)
+
     }
 }
