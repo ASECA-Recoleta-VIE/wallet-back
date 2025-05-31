@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
 
+env:
+  REPO: ${{ github.repository_owner }}
+
 jobs:
   push-to-ghcr:
     runs-on: ubuntu-latest
@@ -19,10 +22,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      - name: downcase REPO
+        run: |
+            echo "REPO=${REPO,,}" >> $GITHUB_ENV
       - name: Build and push for master
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/wallet-back:latest-stable
+          tags: ghcr.io/${{ env.REPO }}/wallet-back:latest-stable
+
