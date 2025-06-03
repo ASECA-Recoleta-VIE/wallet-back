@@ -110,7 +110,7 @@ data class Wallet(
             balance = this.balance - amount,
             history = this.history + History(
                 date = java.time.LocalDate.now(),
-                description = "Transfer to ${toUser.fullName} with balance ${to.getBalance()}",
+                description = "Transfer to ${toUser.fullName}",
                 type = TransactionType.TRANSFER_OUT,
                 amount = amount,
                 balance = this.balance - amount
@@ -123,7 +123,7 @@ data class Wallet(
             balance = to.getBalance() + amount,
             history = to.getHistory() + History(
                 date = java.time.LocalDate.now(),
-                description = "Transfer from ${fromUser.fullName} with balance ${this.getBalance()}",
+                description = "Transfer from ${fromUser.fullName}",
                 type = TransactionType.TRANSFER_IN,
                 amount = amount,
                 balance = to.getBalance() + amount
