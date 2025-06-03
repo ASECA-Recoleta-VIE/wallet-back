@@ -1,6 +1,7 @@
 package com.walletapi.services
 
 import com.walletapi.dto.request.EmailTransactionRequest
+import com.walletapi.dto.response.HistoryResponse
 import com.walletapi.dto.response.TransferResponse
 import com.walletapi.dto.response.WalletResponse
 import com.walletapi.entities.HistoryEntity
@@ -121,7 +122,7 @@ class WalletService(
      */
     private fun createWalletResponse(walletEntity: WalletEntity, currency: String = defaultCurrency): WalletResponse {
         return WalletResponse(
-            id = walletEntity.name ?: "",
+            name = walletEntity.name ?: "",
             balance = walletEntity.balance ?: 0.0,
             currency = currency
         )
@@ -251,14 +252,21 @@ class WalletService(
         }
     }
 
-    fun getHistory(user: UserEntity): List<HistoryEntity> {
+    fun getHistory(user: UserEntity): List<HistoryResponse> {
         try {
             // Find user and wallet
             val walletEntity = findWalletByUser(user, user.email)
 
             // Convert entity to domain model and return history
             val wallet = walletEntity.toWallet()
-            return historyRepository.findByWallet(walletEntity)
+            return historyRepository.findByWallet(walletEntity).map {
+                HistoryResponse(
+                    id = it.id!!,
+                    amount = it.amount!!,
+                    timestamp = it.date.toString()!!,
+                    description = it.description ?: "No description",
+                )
+            }
         } catch (e: WalletException) {
             // Re-throw WalletExceptions as they are already properly typed
             throw e

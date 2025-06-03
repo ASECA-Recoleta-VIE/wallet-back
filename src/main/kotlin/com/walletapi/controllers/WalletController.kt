@@ -97,18 +97,7 @@ class WalletController(private val walletService: WalletService) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(emptyList())
         }
         val history = walletService.getHistory(user)
-
-        val historyResponses = history.map { h ->
-            HistoryResponse(
-                id = h.id!!,
-                amount = h.amount!!,
-                timestamp = h.date.toString(),
-                description = h.description,
-                toWalletId = h.wallet?.id
-            )
-        }
-
-        return ResponseEntity(historyResponses, HttpStatus.OK)
+        return ResponseEntity(history, HttpStatus.OK)
     }
     @Operation(summary = "Get wallet details for a user")
     @ApiResponses(value = [
@@ -128,7 +117,7 @@ class WalletController(private val walletService: WalletService) {
 
         return ResponseEntity(
             WalletResponse(
-                id = wallet.id,
+                name = wallet.name,
                 balance = wallet.balance,
                 currency = wallet.currency
             ),

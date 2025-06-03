@@ -39,7 +39,8 @@ class CookieAuthenticationFilter @Autowired constructor(
             httpRequest.requestURI.contains("/api/users/register") ||
             httpRequest.requestURI.contains("swagger-ui") ||
             httpRequest.requestURI.contains("api-docs") ||
-            httpRequest.requestURI == "/swagger-ui.html") {
+            httpRequest.requestURI == "/swagger-ui.html"
+        ) {
             filterChain.doFilter(httpRequest, httpResponse)
             return
         }
@@ -60,36 +61,54 @@ class CookieAuthenticationFilter @Autowired constructor(
 
         val token = tokenCookie.value
 
-        val claims: Claims = Jwts.parserBuilder()
-            .setSigningKey(key)
-            .build()
-            .parseClaimsJws(token)
-            .body
+        try {
+            val claims: Claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .body
 
-        if (claims.expiration.before(java.util.Date())) {
-            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
-            httpResponse.writer.write("Unauthorized: Token has expired")
-            return
+            if (claims.expiration.before(java.util.Date())) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Token has expired")
+                return
+            }
+
+            // Get user Id from claims and put it in the request attribute
+            val userId = claims.subject
+            if (userId.isNullOrEmpty()) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Invalid token")
+                return
+            }
+            // check if there is a user with this id in the database
+            val optionalUser = userRepository.getUserEntityById(userId)
+            if (optionalUser.isEmpty) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: User not found")
+                return
+            }
+
+            httpRequest.setAttribute("user", optionalUser.get())
+
+            // Token is valid, continue with the request
+            filterChain.doFilter(httpRequest, httpResponse)
+
+        } catch (e: Exception) {
+            if (e is io.jsonwebtoken.ExpiredJwtException) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Token has expired")
+            } else if (e is io.jsonwebtoken.InvalidClaimException) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Invalid token claims")
+            } else if (e is io.jsonwebtoken.MalformedJwtException) {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Malformed token")
+            }
+            else {
+                httpResponse.status = HttpStatus.UNAUTHORIZED.value()
+                httpResponse.writer.write("Unauthorized: Invalid token")
+            }
         }
-
-        // Get user Id from claims and put it in the request attribute
-        val userId = claims.subject
-        if (userId.isNullOrEmpty()) {
-            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
-            httpResponse.writer.write("Unauthorized: Invalid token")
-            return
-        }
-        // check if there is a user with this id in the database
-        val optionalUser = userRepository.getUserEntityById(userId)
-        if (optionalUser.isEmpty) {
-            httpResponse.status = HttpStatus.UNAUTHORIZED.value()
-            httpResponse.writer.write("Unauthorized: User not found")
-            return
-        }
-
-        httpRequest.setAttribute("user", optionalUser.get())
-
-        // Token is valid, continue with the request
-        filterChain.doFilter(httpRequest, httpResponse)
     }
 }

@@ -4,9 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "Request to transfer funds between users")
 data class TransferRequest(
-    @field:Schema(description = "Sender's email", example = "sender@example.com")
-    val fromEmail: String,
-    
     @field:Schema(description = "Recipient's email", example = "recipient@example.com")
     val toEmail: String,
     
