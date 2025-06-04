@@ -39,7 +39,7 @@ class InvalidAmountException(message: String, cause: Throwable? = null) :
  * Exception thrown when there are insufficient funds for a transaction
  */
 class InsufficientFundsException(message: String, cause: Throwable? = null) : 
-    WalletException(HttpStatus.BAD_REQUEST, message, cause)
+    WalletException(HttpStatus.FORBIDDEN, message, cause)
 
 /**
  * Exception thrown for general transaction errors

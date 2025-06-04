@@ -6,10 +6,12 @@ import com.walletapi.dto.request.TransferRequest
 import com.walletapi.dto.response.HistoryResponse
 import com.walletapi.dto.response.TransferResponse
 import com.walletapi.dto.response.WalletResponse
+import com.walletapi.entities.UserEntity
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import jakarta.servlet.http.HttpServletRequest
+
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -25,9 +27,14 @@ class WalletController(private val walletService: WalletService) {
     ])
     @PostMapping("/deposit")
     fun deposit(
-        @RequestBody request: EmailTransactionRequest
+        @RequestBody body: EmailTransactionRequest,
+        request: HttpServletRequest
     ): ResponseEntity<WalletResponse> {
-        val walletResponse = walletService.deposit(request)
+        val user: UserEntity? = request.getAttribute("user") as? UserEntity
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
+        }
+        val walletResponse = walletService.deposit(user,body)
         return ResponseEntity(walletResponse, HttpStatus.OK)
     }
 
@@ -39,9 +46,15 @@ class WalletController(private val walletService: WalletService) {
     ])
     @PostMapping("/withdraw")
     fun withdraw(
-        @RequestBody request: EmailTransactionRequest
+        @RequestBody body: EmailTransactionRequest,
+        request: HttpServletRequest
     ): ResponseEntity<WalletResponse> {
-        val walletResponse = walletService.withdraw(request.email, request.amount, request.description)
+        val user: UserEntity? = request.getAttribute("user") as? UserEntity
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
+        }
+
+        val walletResponse = walletService.withdraw(user, body.amount, body.description)
         return ResponseEntity(walletResponse, HttpStatus.OK)
     }
 
@@ -55,13 +68,17 @@ class WalletController(private val walletService: WalletService) {
     ])
     @PostMapping("/transfer")
     fun transfer(
-        @RequestBody request: TransferRequest
+        @RequestBody body: TransferRequest,  request: HttpServletRequest
     ): ResponseEntity<TransferResponse> {
+        val user: UserEntity? = request.getAttribute("user") as? UserEntity
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
+        }
         val transferResponse = walletService.transfer(
-            request.fromEmail,
-            request.toEmail,
-            request.amount,
-            request.description
+            user,
+            body.toEmail,
+            body.amount,
+            body.description
         )
         return ResponseEntity(transferResponse, HttpStatus.OK)
     }
@@ -72,20 +89,15 @@ class WalletController(private val walletService: WalletService) {
         ApiResponse(responseCode = "404", description = "User wallet not found")
     ])
     @GetMapping("/history")
-    fun getHistory(@RequestParam email: String): ResponseEntity<List<HistoryResponse>> {
-        val history = walletService.getHistory(email)
-
-        val historyResponses = history.map { h ->
-            HistoryResponse(
-                id = h.id!!,
-                amount = h.amount!!,
-                timestamp = h.date.toString(),
-                description = h.description,
-                toWalletId = h.wallet?.id
-            )
+    fun getHistory(
+        request: HttpServletRequest
+    ): ResponseEntity<List<HistoryResponse>> {
+        val user: UserEntity? = request.getAttribute("user") as? UserEntity
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(emptyList())
         }
-
-        return ResponseEntity(historyResponses, HttpStatus.OK)
+        val history = walletService.getHistory(user)
+        return ResponseEntity(history, HttpStatus.OK)
     }
     @Operation(summary = "Get wallet details for a user")
     @ApiResponses(value = [
@@ -94,13 +106,18 @@ class WalletController(private val walletService: WalletService) {
     ])
     @GetMapping("/wallet")
     fun getWallet(
-        @Parameter(description = "Email of the user to retrieve wallet for")
-        @RequestParam email: String
+        request: HttpServletRequest
     ): ResponseEntity<WalletResponse> {
-        val wallet = walletService.getWallet(email)
+        val user: UserEntity? = request.getAttribute("user") as? UserEntity
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
+        }
+        val wallet = walletService.getWallet(user)
+
+
         return ResponseEntity(
             WalletResponse(
-                id = wallet.id,
+                name = wallet.name,
                 balance = wallet.balance,
                 currency = wallet.currency
             ),
