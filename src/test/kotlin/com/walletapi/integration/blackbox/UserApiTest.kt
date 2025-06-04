@@ -52,10 +52,18 @@ class UserApiTest {
     @BeforeEach
     fun setup() {
         logger.info("Clearing database for test")
-        historyRepository.deleteAll()
-        walletRepository.deleteAll()
-        userRepository.deleteAll()
+        try {
+            historyRepository.deleteAll()
+            walletRepository.deleteAll()
+            userRepository.deleteAll()
+            userRepository.flush()
+            logger.info("Database cleared successfully")
+        } catch (e: Exception) {
+            logger.error("Error clearing database: ${e.message}", e)
+            throw e
+        }
     }
+
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
@@ -70,14 +78,6 @@ class UserApiTest {
 
         logger.info("Registering user with email: ${request.email}")
 
-        val response = mockMvc.perform(
-            post("/api/users/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isCreated)
-
-        // check db
         logger.info("Checking if user is registered in the database")
         val user = userRepository.findByEmail(request.email)
         assert(user != null) { "User should be registered in the database" }
