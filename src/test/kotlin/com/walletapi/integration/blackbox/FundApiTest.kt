@@ -4,9 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.walletapi.config.TestConfig
 import com.walletapi.dto.response.WalletResponse
 import com.walletapi.helper.UserHelperService
+import com.walletapi.repositories.HistoryRepository
+import com.walletapi.repositories.UserRepository
+import com.walletapi.repositories.WalletRepository
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -30,6 +35,16 @@ class FundApiTest {
     @Autowired
     private lateinit var fakeApiService: TestConfig.TestFakeApiService
 
+    private val logger: Logger = LoggerFactory.getLogger(UserApiTest::class.java)
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
+    @Autowired
+    private lateinit var historyRepository: HistoryRepository
+    @Autowired
+    private lateinit var walletRepository: WalletRepository
+
+
     private val email = "test@example.com"
     private val name = "Test User"
     private val password = "Password123!"
@@ -37,6 +52,10 @@ class FundApiTest {
 
     @BeforeEach
     fun setup() {
+        logger.info("Clearing database for test")
+        walletRepository.deleteAll()
+        historyRepository.deleteAll()
+        userRepository.deleteAll()
         // Create a user
         mockMvc.perform(
             post("/api/users/register")
