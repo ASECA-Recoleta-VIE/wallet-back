@@ -85,7 +85,6 @@ class UserApiTest {
         assert(user.email == request.email) { "User email should match" }
         assert(user.password != request.password) { "User password should be hashed" }
         logger.info("Database check passed, user registered successfully")
-
     }
 
     @Test
