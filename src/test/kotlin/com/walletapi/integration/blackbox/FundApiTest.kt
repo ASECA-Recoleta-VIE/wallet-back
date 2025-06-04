@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @AutoConfigureMockMvc
 class FundApiTest {
 
+
     @Autowired
     private lateinit var mockMvc: MockMvc
 
