@@ -1,4 +1,16 @@
 services:
+
+  wallet-back:
+    image: ghcr.io/aseca-recoleta-vie/wallet-back:latest-stable
+    container_name: wallet-back
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/walletdb
+      SPRING_DATASOURCE_USERNAME: walletuser
+      SPRING_DATASOURCE_PASSWORD: walletpassword
+    ports:
+      - "8080:8080"
   postgres:
     image: postgres:latest
     container_name: walletapi-postgres
