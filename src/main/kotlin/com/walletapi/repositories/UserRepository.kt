@@ -10,6 +10,8 @@ import java.util.*
 interface UserRepository: JpaRepository<UserEntity, String> {
     fun findByEmail(email: String): UserEntity?
 
+    fun findByEmailStartsWith(emailPrefix: String): List<UserEntity>
+
     @Query("SELECT u FROM UserEntity u LEFT JOIN FETCH u.wallets WHERE u.email = :email")
     fun findByEmailEager(@Param("email") email: String): UserEntity?
 
