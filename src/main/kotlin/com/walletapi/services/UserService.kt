@@ -2,9 +2,11 @@ package com.walletapi.services
 
 import com.walletapi.dto.PasswordValidation
 import com.walletapi.domain_services.DomainUserService
+import com.walletapi.dto.response.UserResponse
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.userToEntity
 import com.walletapi.entities.walletToEntity
+import com.walletapi.exceptions.UserException
 import com.walletapi.models.Wallet
 import com.walletapi.repositories.HistoryRepository
 import com.walletapi.repositories.UserRepository
@@ -31,72 +33,63 @@ class UserService {
 
     @Autowired
     lateinit var userService: DomainUserService
+
     @Autowired
     lateinit var userRepository: UserRepository
-    fun createUser(fullName: String, email: String, password: String): ResponseEntity<Any> {
-        if(email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
-            return ResponseEntity(
-                "Email, password and full name cannot be empty",
-                HttpStatus.BAD_REQUEST
-            )
+    fun createUser(fullName: String, email: String, password: String): ResponseEntity<UserResponse> {
+        if (email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
+            throw UserException.EmptyCredentialsException()
         }
 
         val passwordValidation = validatePassword(password)
         if (passwordValidation != PasswordValidation.VALID) {
-            return ResponseEntity(
-                passwordValidation.name,
-                HttpStatus.BAD_REQUEST
+            throw UserException.WeakPasswordException(
+                password,
+                cause = IllegalArgumentException(
+                    "${passwordValidation.name}, password does not meet the requirements" +
+                            " it should have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 digit and 1 special character"
+                )
             )
         }
 
-        if(userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(email)) {
             throw IllegalArgumentException("User with email $email already exists")
         }
         val user = userService.createUser(
             fullName = fullName,
             email = email,
             password = password,
-            wallets = listOf(Wallet(
-                name = "Main Wallet",
-                balance = 10000.0,
-            ))
+            wallets = listOf(
+                Wallet(
+                    name = "Main Wallet",
+                    balance = 10000.0,
+                )
+            )
         )
         try {
             userRepository.save(userToEntity(user))
             val userEntity = userRepository.findByEmail(email)!!
-            walletRepository.save(walletToEntity(user.wallets[0],userEntity))
-            val walletEntity = walletRepository.findByUser(userEntity).first()
+            walletRepository.save(walletToEntity(user.wallets[0], userEntity))
+
         } catch (e: Exception) {
-            return ResponseEntity(
-                "Error creating user: ${e.message}",
-                HttpStatus.INTERNAL_SERVER_ERROR
-            )
+            throw RuntimeException("Failed to create user: ${e.message}", e)
         }
         return ResponseEntity(
-            user,
+            UserResponse(fullName = user.fullName, email = user.email),
             HttpStatus.CREATED
         )
     }
 
-    fun loginUser(email: String, password: String): ResponseEntity<Any> {
+    fun loginUser(email: String, password: String): ResponseEntity<UserResponse> {
         if (email.isEmpty() || password.isEmpty()) {
-            return ResponseEntity(
-                "Email and password cannot be empty",
-                HttpStatus.BAD_REQUEST
-            )
+            throw UserException.EmptyCredentialsException()
         }
 
         val user = userRepository.findByEmail(email)
-            ?: return ResponseEntity(
-                "User with email $email not found",
-                HttpStatus.NOT_FOUND
-            )
+            ?: throw UserException.InvalidCredentialsException(email)
 
         if (!this.checkPassword(email, password, user.password)) {
-            return ResponseEntity(
-                "Invalid password",
-                HttpStatus.UNAUTHORIZED
-            )
+            throw UserException.InvalidCredentialsException(email)
         }
 
         // Generate JWT token
@@ -111,10 +104,18 @@ class UserService {
             .sameSite("Strict")
             .build()
 
+        val userResponse: UserResponse = UserResponse(fullName = user.fullName, email = user.email)
+
         return ResponseEntity
             .ok()
             .header("Set-Cookie", cookie.toString())
-            .body("login-success")
+            .body(userResponse)
+    }
+
+    fun listUsers(prefix: String): ResponseEntity<List<UserResponse>> {
+        val users = userRepository.findByEmailStartsWith(prefix)
+        val userResponses = users.map { UserResponse(fullName = it.fullName, email = it.email) }
+        return ResponseEntity(userResponses, HttpStatus.OK)
     }
 
     private fun generateJwtToken(user: UserEntity): String {
@@ -125,23 +126,24 @@ class UserService {
             .claim("email", user.email)
             .claim("fullName", user.fullName)
             .setIssuedAt(Date())
-            .setExpiration( Date.from(LocalDateTime.now().plusHours(2).atZone(java.time.ZoneId.systemDefault()).toInstant()))
+            .setExpiration(
+                Date.from(
+                    LocalDateTime.now().plusHours(2).atZone(java.time.ZoneId.systemDefault()).toInstant()
+                )
+            )
             .signWith(key, SignatureAlgorithm.HS256)
             .compact()
     }
 
 
-
-    fun checkPassword(email:String, password: String, hash: String): Boolean {
+   private fun checkPassword(email: String, password: String, hash: String): Boolean {
         return userService.verifyPassword(password, hash)
     }
 
 
 
 
-
-
-    fun validatePassword(password: String): PasswordValidation {
+    private fun validatePassword(password: String): PasswordValidation {
         // should have 1 upper case letter, 1 lower case letter, 1 digit and 1 special character
         if (password.length < 8) {
             return PasswordValidation.PASSWORD_TOO_SHORT
