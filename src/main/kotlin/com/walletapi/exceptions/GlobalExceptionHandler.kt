@@ -36,6 +36,20 @@ class GlobalExceptionHandler {
         )
         return ResponseEntity(errorResponse, org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
     }
+
+
+    /**
+     * Handle UserException
+     */
+    @ExceptionHandler(UserException::class)
+    fun handleUserException(ex: UserException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        val errorResponse = ErrorResponse(
+            status = ex.status.value(),
+            error = ex.status.reasonPhrase,
+            message = ex.message
+        )
+        return ResponseEntity(errorResponse, ex.status)
+    }
 }
 
 /**
