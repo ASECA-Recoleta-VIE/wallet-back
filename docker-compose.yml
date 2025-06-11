@@ -8,8 +8,26 @@ services:
       POSTGRES_PASSWORD: walletpassword
     ports:
       - "5432:5432"
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  wallet-back:
+    build: .
+    container_name: wallet-back
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/walletdb
+      SPRING_DATASOURCE_USERNAME: walletuser
+      SPRING_DATASOURCE_PASSWORD: walletpassword
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 3G
 
 volumes:
   postgres_data:
