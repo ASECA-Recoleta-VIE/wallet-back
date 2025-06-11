@@ -265,6 +265,7 @@ class WalletService(
                     amount = it.amount!!,
                     timestamp = it.date.toString()!!,
                     description = it.description ?: "No description",
+                    type = it.type.name
                 )
             }
         } catch (e: WalletException) {

@@ -15,4 +15,8 @@ data class HistoryResponse(
     
     @field:Schema(description = "Optional transaction description")
     val description: String? = null,
+
+    @field:Schema(description = "Transaction type")
+    val type: String? = null,
+
 )
