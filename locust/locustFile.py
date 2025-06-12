@@ -1,11 +1,10 @@
 import random
-import json
 import time
 from locust import HttpUser, task, between
 
 
 class WalletApiUser(HttpUser):
-    wait_time = between(1, 5)  # Wait between 1 and 5 seconds between tasks
+    wait_time = between(0.5, 1.5)
 
     # User state variables
     email = None
