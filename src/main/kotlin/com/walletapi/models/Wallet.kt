@@ -1,5 +1,4 @@
 package com.walletapi.models
-import com.walletapi.models.User
 import java.time.LocalDate
 
 data class Wallet(
@@ -151,5 +150,25 @@ data class Wallet(
         result = 31 * result + overdraft.hashCode()
         result = 31 * result + history.hashCode()
         return result
+    }
+
+    fun debin(amount: Double, reason: String): Result<Wallet> {
+        if (amount < 0) {
+            return Result.failure(IllegalArgumentException("Amount must be positive"))
+        }
+        // adding the deposit to the history
+        return Result.success(
+            Wallet(
+                name = this.name,
+                overdraft = this.overdraft,
+                balance = this.balance + amount,
+                history = this.history + History(
+                    date = LocalDate.now(),
+                    description = reason,
+                    type = TransactionType.DEBIN_REQUEST,
+                    amount = amount,
+                    balance = this.balance + amount
+                )
+            ))
     }
 }

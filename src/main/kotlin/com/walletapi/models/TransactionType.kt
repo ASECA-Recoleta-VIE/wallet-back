@@ -4,5 +4,6 @@ enum class TransactionType {
     DEPOSIT,
     WITHDRAWAL,
     TRANSFER_IN,
-    TRANSFER_OUT
+    TRANSFER_OUT,
+    DEBIN_REQUEST
 }

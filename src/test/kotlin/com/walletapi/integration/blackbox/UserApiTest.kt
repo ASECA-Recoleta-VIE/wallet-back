@@ -53,8 +53,8 @@ class UserApiTest {
     @BeforeEach
     fun setup() {
         logger.info("Clearing database for test")
-        historyRepository.deleteAll()
         walletRepository.deleteAll()
+        historyRepository.deleteAll()
         userRepository.deleteAll()
     }
 

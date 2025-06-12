@@ -142,7 +142,7 @@ class WalletApiTest {
                 assert(content.name == "Main Wallet") { "Wallet name should be 'Main Wallet'" }
                 assert(content.balance >= 0) { "Wallet balance should be non-negative" }
                 assert(content.currency == "USD") { "Wallet currency should be 'USD'" }
-                assert(content.balance == 10000.0) { "Wallet balance should be 10000.0" }
+                assert(content.balance == 0.0) { "Wallet balance should be 0.0" }
             }
 
         // persistence check
@@ -152,7 +152,7 @@ class WalletApiTest {
         val wallet = user.wallets.first()
         assert(wallet.name == "Main Wallet") { "Wallet name should be 'Main Wallet'" }
         assert(wallet.balance!! >= 0.0) { "Wallet balance should be non-negative" }
-        assert(wallet.balance == 10000.0) { "Wallet balance should be 10000.0" }
+        assert(wallet.balance == 0.0) { "Wallet balance should be 0.0" }
     }
 
     /**
@@ -211,7 +211,7 @@ class WalletApiTest {
                     result.response.contentAsString,
                     WalletResponse::class.java
                 )
-                assert(content.balance == 11000.0) { "Wallet balance should be 11000.0 after adding money" }
+                assert(content.balance == 1000.0) { "Wallet balance should be 1000.0 after adding money" }
             }
 
 
@@ -220,7 +220,7 @@ class WalletApiTest {
         assert(user != null) { "User should be registered in the database" }
         val wallet = user!!.wallets.firstOrNull()
         assert(wallet != null) { "User should have at least one wallet" }
-        assert(wallet!!.balance == 11000.0) { "Wallet balance should be 11000.0 after adding money" }
+        assert(wallet!!.balance == 1000.0) { "Wallet balance should be 1000.0 after adding money" }
     }
 
     /**
@@ -251,7 +251,7 @@ class WalletApiTest {
         assert(user != null) { "User should be registered in the database" }
         val wallet = user!!.wallets.firstOrNull()
         assert(wallet != null) { "User should have at least one wallet" }
-        assert(wallet!!.balance == 10000.0) { "Wallet balance should remain unchanged at 10000.0" }
+        assert(wallet!!.balance == 0.0) { "Wallet balance should remain unchanged at 0.0" }
     }
 
     /**
@@ -260,6 +260,22 @@ class WalletApiTest {
      */
     @Test
     fun userShouldBeAbleToWithdrawMoneyFromWallet() {
+        // First deposit money to the wallet
+        mockMvc.perform(
+            post("/deposit")
+                .cookie(firstUserCookie)
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                        "amount": 1000,
+                        "description": "Initial deposit"
+                    }
+                """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+
         // Withdraw money from the wallet
         mockMvc.perform(
             post("/withdraw")
@@ -280,7 +296,7 @@ class WalletApiTest {
                     result.response.contentAsString,
                     WalletResponse::class.java
                 )
-                assert(content.balance == 9500.0) { "Wallet balance should be 10500.0 after withdrawal" }
+                assert(content.balance == 500.0) { "Wallet balance should be 500.0 after withdrawal" }
             }
 
         // persistence check
@@ -288,7 +304,7 @@ class WalletApiTest {
         assert(user != null) { "User should be registered in the database" }
         val wallet = user!!.wallets.firstOrNull()
         assert(wallet != null) { "User should have at least one wallet" }
-        assert(wallet!!.balance == 9500.0) { "Wallet balance should be 9500.0 after withdrawal" }
+        assert(wallet!!.balance == 500.0) { "Wallet balance should be 500.0 after withdrawal" }
     }
 
     /**
@@ -297,7 +313,7 @@ class WalletApiTest {
      */
     @Test
     fun userShouldNotBeAbleToWithdrawMoreThanBalance() {
-        // Try to withdraw more than the wallet balance
+        // Try to withdraw more than the wallet balance (which is initially 0)
         mockMvc.perform(
             post("/withdraw")
                 .cookie(firstUserCookie)
@@ -305,7 +321,7 @@ class WalletApiTest {
                 .content(
                     """
                     {
-                        "amount": 20000,
+                        "amount": 100,
                         "description": "Invalid withdrawal"
                     }
                 """.trimIndent()
@@ -319,7 +335,7 @@ class WalletApiTest {
         assert(user != null) { "User should be registered in the database" }
         val wallet = user!!.wallets.firstOrNull()
         assert(wallet != null) { "User should have at least one wallet" }
-        assert(wallet!!.balance == 10000.0) { "Wallet balance should remain unchanged at 10000.0" }
+        assert(wallet!!.balance == 0.0) { "Wallet balance should remain unchanged at 0.0" }
     }
 
 
@@ -397,6 +413,22 @@ class WalletApiTest {
      */
     @Test
     fun userShouldBeAbleToTransferMoneyToAnotherUser() {
+        // First deposit money to the wallet
+        mockMvc.perform(
+            post("/deposit")
+                .cookie(firstUserCookie)
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                        "amount": 1000,
+                        "description": "Initial deposit"
+                    }
+                """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+
         // Transfer money to the second user
         mockMvc.perform(
             post("/transfer")
@@ -417,8 +449,8 @@ class WalletApiTest {
                 val content: TransferResponse = ObjectMapper().readValue(result.response.contentAsString, TransferResponse::class.java)
                 val fromWallet = content.fromWallet
                 val toWallet = content.toWallet
-                assert(fromWallet.balance == 9800.0) { "From wallet balance should be 9800.0 after transfer" }
-                assert(toWallet.balance == 10200.0) { "To wallet balance should be 10200.0 after transfer" }
+                assert(fromWallet.balance == 800.0) { "From wallet balance should be 800.0 after transfer" }
+                assert(toWallet.balance == 200.0) { "To wallet balance should be 200.0 after transfer" }
             }
 
 
@@ -427,13 +459,13 @@ class WalletApiTest {
         assert(firstUser != null) { "First user should be registered in the database" }
         val firstWallet = firstUser!!.wallets.firstOrNull()
         assert(firstWallet != null) { "First user should have at least one wallet" }
-        assert(firstWallet!!.balance == 9800.0) { "First user's wallet balance should be 9800.0 after transfer" }
+        assert(firstWallet!!.balance == 800.0) { "First user's wallet balance should be 800.0 after transfer" }
 
         val secondUser = userHelperService.getUserWithWalletsAndHistory(secondEmail)
         assert(secondUser != null) { "Second user should be registered in the database" }
         val secondWallet = secondUser!!.wallets.firstOrNull()
         assert(secondWallet != null) { "Second user should have at least one wallet" }
-        assert(secondWallet!!.balance == 10200.0) { "Second user's wallet balance should be 10200.0 after transfer" }
+        assert(secondWallet!!.balance == 200.0) { "Second user's wallet balance should be 200.0 after transfer" }
     }
 
     /**
@@ -464,7 +496,7 @@ class WalletApiTest {
         assert(firstUser != null) { "First user should be registered in the database" }
         val firstWallet = firstUser!!.wallets.firstOrNull()
         assert(firstWallet != null) { "First user should have at least one wallet" }
-        assert(firstWallet!!.balance == 10000.0) { "First user's wallet balance should remain unchanged at 10000.0" }
+        assert(firstWallet!!.balance == 0.0) { "First user's wallet balance should remain unchanged at 0.0" }
     }
 
 
@@ -474,7 +506,7 @@ class WalletApiTest {
      */
     @Test
     fun userShouldNotBeAbleToTransferMoreThanBalance() {
-        // Try to transfer more than the wallet balance
+        // Try to transfer more than the wallet balance (which is initially 0)
         mockMvc.perform(
             post("/transfer")
                 .cookie(firstUserCookie)
@@ -483,7 +515,7 @@ class WalletApiTest {
                     """
                     {
                         "toEmail": "$secondEmail",
-                        "amount": 20000,
+                        "amount": 100,
                         "description": "Invalid transfer"
                     }
                 """.trimIndent()
@@ -497,7 +529,7 @@ class WalletApiTest {
         assert(firstUser != null) { "First user should be registered in the database" }
         val firstWallet = firstUser!!.wallets.firstOrNull()
         assert(firstWallet != null) { "First user should have at least one wallet" }
-        assert(firstWallet!!.balance == 10000.0) { "First user's wallet balance should remain unchanged at 10000.0" }
+        assert(firstWallet!!.balance == 0.0) { "First user's wallet balance should remain unchanged at 0.0" }
     }
 
 
@@ -530,7 +562,7 @@ class WalletApiTest {
         assert(firstUser != null) { "First user should be registered in the database" }
         val firstWallet = firstUser!!.wallets.firstOrNull()
         assert(firstWallet != null) { "First user should have at least one wallet" }
-        assert(firstWallet!!.balance == 10000.0) { "First user's wallet balance should remain unchanged at 10000.0" }
+        assert(firstWallet!!.balance == 0.0) { "First user's wallet balance should remain unchanged at 0.0" }
     }
 
 
@@ -540,6 +572,22 @@ class WalletApiTest {
      */
     @Test
     fun userShouldBeAbleToViewTransactionHistory() {
+        // First deposit money to the wallet
+        mockMvc.perform(
+            post("/deposit")
+                .cookie(firstUserCookie)
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                        "amount": 1000,
+                        "description": "Initial deposit"
+                    }
+                """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+
         mockMvc.perform(
             post("/transfer")
                 .cookie(firstUserCookie)

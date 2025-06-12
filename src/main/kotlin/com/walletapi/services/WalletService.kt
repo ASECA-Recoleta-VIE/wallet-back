@@ -7,7 +7,6 @@ import com.walletapi.dto.response.WalletResponse
 import com.walletapi.entities.HistoryEntity
 import com.walletapi.entities.UserEntity
 import com.walletapi.entities.WalletEntity
-import com.walletapi.entities.walletToEntity
 import com.walletapi.exceptions.InsufficientFundsException
 import com.walletapi.exceptions.InvalidAmountException
 import com.walletapi.exceptions.SelfTransferException
@@ -16,8 +15,6 @@ import com.walletapi.exceptions.UserNotFoundException
 import com.walletapi.exceptions.WalletException
 import com.walletapi.exceptions.WalletNotFoundException
 import com.walletapi.models.History
-import com.walletapi.models.TransactionType
-import com.walletapi.models.User
 import com.walletapi.models.Wallet
 import com.walletapi.repositories.HistoryRepository
 import com.walletapi.repositories.UserRepository
@@ -167,6 +164,41 @@ class WalletService(
     }
 
     @Transactional
+    fun requestFunds(user: UserEntity, requestInfo: EmailTransactionRequest): WalletResponse {
+        try {
+            // Find user and wallet
+            val walletEntity = findWalletByUser(user, user.email)
+
+            // Convert entity to domain model
+            val wallet = walletEntity.toWallet()
+
+            // Perform debin operation
+            val updatedWalletResult = wallet.debin(
+                amount = requestInfo.amount,
+                reason = requestInfo.description ?: "Fund request"
+            )
+
+            // Handle result and get updated wallet
+            val updatedWallet = handleResult(
+                updatedWalletResult, 
+                "Unknown error during fund request"
+            )
+
+            // Update wallet entity with new balance and history
+            val updatedWalletEntity = updateWalletEntity(walletEntity, updatedWallet)
+
+            // Create and return response
+            return createWalletResponse(updatedWalletEntity)
+        } catch (e: WalletException) {
+            // Re-throw WalletExceptions as they are already properly typed
+            throw e
+        } catch (e: Exception) {
+            // Convert any other exceptions to TransactionException
+            throw TransactionException("Error processing fund request: ${e.message}", e)
+        }
+    }
+
+    @Transactional
     fun withdraw(user: UserEntity, amount: Double, description: String? = null): WalletResponse {
         try {
             // Find user and wallet
@@ -202,7 +234,7 @@ class WalletService(
     fun transfer(user: UserEntity, toUserEmail: String, amount: Double, description: String? = null): TransferResponse {
         try {
             // Find users and wallets
-          
+
             // refetch user to dont have lazy loading issues
             val user = userRepository.findByEmail(user.email)
                 ?: throw UserNotFoundException(user.email)
