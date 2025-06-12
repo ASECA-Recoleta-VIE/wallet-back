@@ -26,9 +26,6 @@ import javax.crypto.spec.SecretKeySpec
 @Service
 class UserService {
     @Autowired
-    private lateinit var historyRepository: HistoryRepository
-
-    @Autowired
     private lateinit var walletRepository: WalletRepository
 
     @Autowired
@@ -62,7 +59,7 @@ class UserService {
             wallets = listOf(
                 Wallet(
                     name = "Main Wallet",
-                    balance = 10000.0,
+                    balance = 0.0,
                 )
             )
         )
