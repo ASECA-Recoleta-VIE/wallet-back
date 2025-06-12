@@ -9,8 +9,19 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/walletdb
       SPRING_DATASOURCE_USERNAME: walletuser
       SPRING_DATASOURCE_PASSWORD: walletpassword
+      FAKE_API_URL: http://debin-back:9090
     ports:
       - "8080:8080"
+    mem_limit: 1g
+  
+  debin-back:
+    image: ghcr.io/aseca-recoleta-vie/debin-back:latest-stable
+    container_name: debin-back
+    depends_on:
+      - wallet-back
+    ports:
+      - "9090:9090"
+    mem_limit: 1g
   postgres:
     image: postgres:latest
     container_name: walletapi-postgres
@@ -20,6 +31,7 @@ services:
       POSTGRES_PASSWORD: walletpassword
     ports:
       - "5432:5432"
+    mem_limit: 1g
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
