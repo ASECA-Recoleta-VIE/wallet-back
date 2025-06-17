@@ -475,6 +475,19 @@ class WalletApiTest {
     @Test
     fun userShouldNotBeAbleToTransferMoneyToSelf() {
         // Try to transfer money to the same user
+        mockMvc.perform (
+            post("/deposit")
+                .cookie(firstUserCookie)
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                        "amount": 1000,
+                        "description": "Initial deposit"
+                    }
+                """.trimIndent()
+                )
+        );
         mockMvc.perform(
             post("/transfer")
                 .cookie(firstUserCookie)
@@ -496,7 +509,7 @@ class WalletApiTest {
         assert(firstUser != null) { "First user should be registered in the database" }
         val firstWallet = firstUser!!.wallets.firstOrNull()
         assert(firstWallet != null) { "First user should have at least one wallet" }
-        assert(firstWallet!!.balance == 0.0) { "First user's wallet balance should remain unchanged at 0.0" }
+        assert(firstWallet!!.balance == 1000.0) { "First user's wallet balance should remain unchanged at 1000.0" }
     }
 
 

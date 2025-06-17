@@ -1,6 +1,5 @@
 package com.walletapi.services
 
-import com.walletapi.dto.PasswordValidation
 import com.walletapi.domain_services.DomainUserService
 import com.walletapi.dto.response.UserResponse
 import com.walletapi.entities.UserEntity
@@ -38,17 +37,6 @@ class UserService {
             throw UserException.EmptyCredentialsException()
         }
 
-        val passwordValidation = validatePassword(password)
-        if (passwordValidation != PasswordValidation.VALID) {
-            throw UserException.WeakPasswordException(
-                password,
-                cause = IllegalArgumentException(
-                    "${passwordValidation.name}, password does not meet the requirements" +
-                            " it should have at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 digit and 1 special character"
-                )
-            )
-        }
-
         if (userRepository.existsByEmail(email)) {
             throw IllegalArgumentException("User with email $email already exists")
         }
@@ -69,6 +57,9 @@ class UserService {
             walletRepository.save(walletToEntity(user.wallets[0], userEntity))
 
         } catch (e: Exception) {
+            if (e is UserException.WeakPasswordException) {
+                throw e
+            }
             throw RuntimeException("Failed to create user: ${e.message}", e)
         }
         return ResponseEntity(
@@ -135,28 +126,5 @@ class UserService {
 
    private fun checkPassword(email: String, password: String, hash: String): Boolean {
         return userService.verifyPassword(password, hash)
-    }
-
-
-
-
-    private fun validatePassword(password: String): PasswordValidation {
-        // should have 1 upper case letter, 1 lower case letter, 1 digit and 1 special character
-        if (password.length < 8) {
-            return PasswordValidation.PASSWORD_TOO_SHORT
-        }
-        if (!password.any { it.isUpperCase() }) {
-            return PasswordValidation.NO_UPPERCASE
-        }
-        if (!password.any { it.isLowerCase() }) {
-            return PasswordValidation.NO_LOWERCASE
-        }
-        if (!password.any { it.isDigit() }) {
-            return PasswordValidation.NO_NUMBER
-        }
-        if (!password.any { it in "!@#$%^&*()_+-=[]{}|;':\",.<>?/" }) {
-            return PasswordValidation.NO_SPECIAL_CHAR
-        }
-        return PasswordValidation.VALID
     }
 }

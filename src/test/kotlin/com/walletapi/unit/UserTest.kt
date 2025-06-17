@@ -1,4 +1,4 @@
-package com.walletapi.services
+package com.walletapi.unit
 
 import com.walletapi.models.User
 import com.walletapi.models.Wallet

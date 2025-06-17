@@ -10,6 +10,7 @@ class DomainUserService {
     private val encoder = BCryptPasswordEncoder()
 
     fun createUser(fullName: String, email: String, password: String, wallets: List<Wallet>): User {
+        val validatePassword = User(fullName, email, password, wallets)
         val encryptedPassword = encryptPassword(password, email)
         val user = User(fullName, email, encryptedPassword, wallets)
         return user

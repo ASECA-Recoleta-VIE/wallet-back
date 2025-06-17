@@ -1,4 +1,6 @@
 package com.walletapi.models
+
+import com.walletapi.exceptions.SelfTransferException
 import java.time.LocalDate
 
 data class Wallet(
@@ -16,17 +18,18 @@ data class Wallet(
         // adding the deposit to the history
         return Result.success(
             Wallet(
-            name = this.name,
-            overdraft = this.overdraft,
-            balance = this.balance + amount,
-            history = this.history + History(
-                date = LocalDate.now(),
-                description = reason,
-                type = TransactionType.DEPOSIT,
-                amount = amount,
-                balance = this.balance + amount
+                name = this.name,
+                overdraft = this.overdraft,
+                balance = this.balance + amount,
+                history = this.history + History(
+                    date = LocalDate.now(),
+                    description = reason,
+                    type = TransactionType.DEPOSIT,
+                    amount = amount,
+                    balance = this.balance + amount
+                )
+            )
         )
-        ))
     }
 
     fun withdraw(amount: Double, reason: String = "Withdrawal"): Result<Wallet> {
@@ -39,54 +42,29 @@ data class Wallet(
         // adding the withdrawal to the history
         return Result.success(
             Wallet(
-            name = this.name,
-            overdraft = this.overdraft,
-            balance = this.balance - amount,
-            history = this.history + History(
-                date = LocalDate.now(),
-                description = reason,
-                type = TransactionType.WITHDRAWAL,
-                amount = amount,
-                balance = this.balance - amount
+                name = this.name,
+                overdraft = this.overdraft,
+                balance = this.balance - amount,
+                history = this.history + History(
+                    date = LocalDate.now(),
+                    description = reason,
+                    type = TransactionType.WITHDRAWAL,
+                    amount = amount,
+                    balance = this.balance - amount
+                )
             )
         )
-        )
     }
 
-
-    private fun add(amount: Long): Wallet {
-        if (amount < 0) {
-            throw IllegalArgumentException("Amount must be positive")
-        }
-        return Wallet(
-            name = this.name,
-            overdraft = this.overdraft,
-            balance = this.balance + amount,
-            history = this.history
-        )
-    }
-
-    private fun subtract(amount: Long): Wallet {
-        if (amount < 0) {
-            throw IllegalArgumentException("Amount must be positive")
-        }
-        if (this.balance + this.overdraft < amount) {
-            throw IllegalArgumentException("Insufficient funds")
-        }
-        return Wallet(
-            name = this.name,
-            overdraft = this.overdraft,
-            balance = this.balance - amount,
-            history = this.history
-        )
-    }
 
     fun getBalance(): Double {
         return this.balance
     }
+
     fun getOverdraft(): Double {
         return this.overdraft
     }
+
     fun getHistory(): List<History> {
         return this.history
     }
@@ -95,12 +73,16 @@ data class Wallet(
         return this.name
     }
 
-   fun transfer(to: Wallet, amount: Double, fromUser: User, toUser: User): Result<Pair<Wallet, Wallet>> {
+    fun transfer(to: Wallet, amount: Double, fromUser: User, toUser: User): Result<Pair<Wallet, Wallet>> {
         if (amount < 0) {
             return Result.failure(IllegalArgumentException("Amount must be positive"))
         }
         if (this.balance - amount < this.overdraft) {
             return Result.failure(IllegalArgumentException("Insufficient funds"))
+        }
+
+        if (fromUser.email == toUser.email) {
+            return Result.failure(IllegalArgumentException("Self transfers are not allowed"))
         }
 
         val updatedSender = Wallet(
@@ -131,7 +113,6 @@ data class Wallet(
 
         return Result.success(Pair(updatedSender, updatedReceiver))
     }
-
 
 
     override fun equals(other: Any?): Boolean {
@@ -169,6 +150,7 @@ data class Wallet(
                     amount = amount,
                     balance = this.balance + amount
                 )
-            ))
+            )
+        )
     }
 }

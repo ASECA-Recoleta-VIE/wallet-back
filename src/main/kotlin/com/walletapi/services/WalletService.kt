@@ -59,7 +59,10 @@ class WalletService(
                         throw InvalidAmountException(exception.message ?: "Amount must be positive", exception)
                     } else if (exception.message?.contains("Insufficient funds") == true) {
                         throw InsufficientFundsException(exception.message ?: "Insufficient funds", exception)
-                    } else {
+                    } else if (exception.message?.contains("Self transfer") == true) {
+                        throw SelfTransferException(exception.message ?: "Self transfer is not allowed", exception)
+                    }
+                    else {
                         throw TransactionException(exception.message ?: errorMessage, exception)
                     }
                 }
@@ -240,10 +243,6 @@ class WalletService(
                 ?: throw UserNotFoundException(user.email)
 
             val toUserEntity = findUserByEmail(toUserEmail)
-            // Check if users are the same
-            if (user.email == toUserEmail) {
-                throw SelfTransferException(user.email)
-            }
             val fromWalletEntity = findWalletByUser(user, user.email)
             val toWalletEntity = findWalletByUser(toUserEntity, toUserEmail)
 
