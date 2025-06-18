@@ -33,10 +33,11 @@ class CookieAuthenticationFilter @Autowired constructor(
     ) {
         val httpRequest = request
         val httpResponse = response
-        // Skip authentication for login, register, and Swagger/OpenAPI endpoints
+        // Skip authentication for login, register, deposit, and Swagger/OpenAPI endpoints
         if (httpRequest.requestURI.contains("/api/users/login") ||
             "OPTIONS" == httpRequest.method ||
             httpRequest.requestURI.contains("/api/users/register") ||
+            httpRequest.requestURI.contains("/deposit") ||
             httpRequest.requestURI.contains("swagger-ui") ||
             httpRequest.requestURI.contains("api-docs") ||
             httpRequest.requestURI == "/swagger-ui.html"

@@ -224,6 +224,42 @@ class WalletApiTest {
     }
 
     /**
+     * This test checks that a user can add money to their wallet without authentication.
+     * It assumes that the wallet service allows deposits without authentication.
+     */
+    @Test
+    fun userShouldBeAbleToAddMoneyToWalletWithoutAuthentication() {
+        // Add money to the wallet without authentication (no cookie)
+        mockMvc.perform(
+            post("/deposit")
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                        "amount": 1000,
+                        "description": "Monthly salary without authentication"
+                    }
+                """.trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect { result ->
+                val content: WalletResponse = ObjectMapper().readValue(
+                    result.response.contentAsString,
+                    WalletResponse::class.java
+                )
+                assert(content.balance == 1000.0) { "Wallet balance should be 1000.0 after adding money without authentication" }
+            }
+
+        // persistence check
+        val user = userHelperService.getUserWithWalletsAndHistory(firstEmail)
+        assert(user != null) { "User should be registered in the database" }
+        val wallet = user!!.wallets.firstOrNull()
+        assert(wallet != null) { "User should have at least one wallet" }
+        assert(wallet!!.balance == 1000.0) { "Wallet balance should be 1000.0 after adding money without authentication" }
+    }
+
+    /**
      * This test checks that a user cannot add a negative amount to their wallet.
      * It assumes that the wallet service validates the amount before processing the deposit.
      */
